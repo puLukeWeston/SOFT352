@@ -1,0 +1,40 @@
+<canvas id="gameboard" width="500" height="500" style="border:1px solid #000000;"></canvas>
+<script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+
+<script>
+  var gameboard = document.getElementById("gameboard").getContext("2d");
+  gameboard.font = '20px Arial';
+  var socket = io();
+
+  // When the server sends back the new positions datapack, update the canvas
+  socket.on('newPositions',function(data){
+    gameboard.clearRect(0, 0, 500, 500);
+    for(var i = 0; i < data.length; i++) {
+      gameboard.fillText(data[i].number, data[i].x, data[i].y);
+    }
+  });
+
+  // Listen for the WASD keydown & report changes
+  document.onkeydown = function(event) {
+    if(event.keyCode === 87) //w
+      socket.emit('keyPress',{inputId:'up',state:true});
+    if(event.keyCode === 65) //a
+      socket.emit('keyPress',{inputId:'left',state:true});
+    if(event.keyCode === 83) //s
+      socket.emit('keyPress',{inputId:'down',state:true});
+    if(event.keyCode === 68) //d
+      socket.emit('keyPress',{inputId:'right',state:true});
+  }
+
+  // Listen for the WASD keyup & report changes
+  document.onkeyup = function(event) {
+    if(event.keyCode === 87) //w
+      socket.emit('keyPress',{inputId:'up',state:false});
+    if(event.keyCode === 65) //a
+      socket.emit('keyPress',{inputId:'left',state:false});
+    if(event.keyCode === 83) //s
+      socket.emit('keyPress',{inputId:'down',state:false});
+    if(event.keyCode === 68) //d
+      socket.emit('keyPress',{inputId:'right',state:false});
+  }
+</script>
