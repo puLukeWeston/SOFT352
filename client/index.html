@@ -85,7 +85,7 @@
 
     // If the mouse click was over the top of one of the elements
   elements.forEach(function (element) {
-    if(y > element.top && pageY < element.top + element.height && pageX > element.left && pageX < element.left + element.width) {
+    if(pageY > element.top && pageY < element.top + element.height && pageX > element.left && pageX < element.left + element.width) {
       console.log(element.id);
     }
   });
