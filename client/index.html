@@ -1,7 +1,7 @@
 <canvas id="gameboard" width="500" height="500" style="border:1px solid #000000;"></canvas>
 
 <form id="debug-form">
-  <input id="debug-input" type="text" stylle="width:500px"></input>
+  <input id="debug-input" type="text" style="width:500px"></input>
 </form>
 
 <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
@@ -21,7 +21,7 @@
       gameboard.fillText(data.player[i].assignment, data.player[i].x, data.player[i].y);
 
     for(var i = 0; i < data.projectile.length; i++)
-      gameboard.fillRect(data.projectile[i].x-5, data.projectile[i].y-5, 10, 10);
+      gameboard.fillRect(data.projectile[i].x-2, data.projectile[i].y-2, 4, 4);
 
   });
 
