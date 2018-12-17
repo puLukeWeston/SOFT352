@@ -17,9 +17,12 @@
   // When the server sends back the new positions datapack, update the canvas
   socket.on('newPositions',function(data) {
     gameboard.clearRect(0, 0, 500, 500);
-    for(var i = 0; i < data.length; i++) {
-      gameboard.fillText(data[i].number, data[i].x, data[i].y);
-    }
+    for(var i = 0; i < data.player.length; i++)
+      gameboard.fillText(data.player[i].number, data.player[i].x, data.player[i].y);
+
+    for(var i = 0; i < data.projectile.length; i++)
+      gameboard.fillRect(data.projectile[i].x-5, data.projectile[i].y-5, 10, 10);
+
   });
 
   socket.on('evalAnswer', function(data) {
