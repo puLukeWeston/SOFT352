@@ -18,7 +18,7 @@
   socket.on('newPositions',function(data) {
     gameboard.clearRect(0, 0, 500, 500);
     for(var i = 0; i < data.player.length; i++)
-      gameboard.fillText(data.player[i].number, data.player[i].x, data.player[i].y);
+      gameboard.fillText(data.player[i].assignment, data.player[i].x, data.player[i].y);
 
     for(var i = 0; i < data.projectile.length; i++)
       gameboard.fillRect(data.projectile[i].x-5, data.projectile[i].y-5, 10, 10);

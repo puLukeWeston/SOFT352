@@ -32,15 +32,14 @@ var Entity = function() {
   return self;
 }
 
-var Player = function(id) {
+var Player = function(id, assignment) {
   var self = Entity();
   // Overwrite the default entity attributes
   self.x = 250;
   self.y = 250;
   self.id = id;
-  // Assign random number to tell the clients apart for now
-  self.number = "" + Math.floor(10 * Math.random());
   // Add Player specific defaults
+  self.assignment = assignment;
   self.pressingRight = false;
   self.pressingLeft = false;
   self.pressingUp = false;
@@ -77,9 +76,9 @@ var Player = function(id) {
 }
 Player.list = {};
 
-Player.onConnect = function(socket) {
+Player.onConnect = function(socket, assignment) {
   // Create the client a new Player object based on the socket id
-  var player = Player(socket.id);
+  var player = Player(socket.id, assignment);
 
   // Then add a listener for keypresses to update the position
   socket.on('keyPress', function(data){
@@ -108,7 +107,7 @@ Player.update = function() {
     pack.push({
       x:player.x,
       y:player.y,
-      number:player.number
+      assignment:player.assignment
     });
   }
   return pack;
@@ -161,14 +160,42 @@ Projectile.update = function() {
 
 // Constant to allow debugging of values server-side
 var DEBUG = true;
+var count = 0;
 var io = require('socket.io')(serv,{});
 io.sockets.on('connection', function(socket) {
   // Give the client an ID (temporary functionality)
   socket.id = Math.random();
   SOCKET_LIST[socket.id] = socket;
 
+  // Either a cat or a mouse
+  var assignment = "";
+  // If this was the first connection to the server, default to cat
+  if(count === 0) {
+    assignment = "C";
+    count++;
+    // If its the second, default to mouse
+  } else if(count < 2) {
+    assignment = "M";
+    count++;
+    // If there have been more than 2 connections
+  } else {
+    // Loop through the clients and string them together
+    var clients = "";
+    for(var i in Player.list)
+      clients += Player.list[i].assignment;
+
+    // If the String contains both a C and an M, don't assign the client to anything
+    if(clients.indexOf("M") > -1 && clients.indexOf("C") > -1)
+      console.log("Already have two clients");
+    // If just an M exists, assign the client to cat (and vice versa)
+    else if(clients.indexOf("M") > -1)
+      assignment = "C";
+    else
+      assignment = "M";
+  }
+
   // When a player connects, call this function to create a new Player
-  Player.onConnect(socket);
+  Player.onConnect(socket, assignment);
 
   // If the client disconnects
   socket.on('disconnect',function(){
