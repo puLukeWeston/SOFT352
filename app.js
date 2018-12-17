@@ -3,6 +3,7 @@ var app = express();
 var serv = require('http').Server(app);
 var player = require('./classes/Player.js');
 var projectile = require('./classes/Projectile.js');
+var tap = require('./classes/Tap.js');
 
 app.get('/',function(req, res) {
   res.sendFile(__dirname + '/client/index.html');
@@ -14,9 +15,18 @@ serv.listen(2000);
 console.log("Server Started.");
 
 var SOCKET_LIST = {};
-
 Player.list = {};
 Projectile.list = {};
+Tap.list = {};
+
+createObstacles();
+
+function createObstacles() {
+  var tap = Tap(1);
+  tap.x = 100;
+  tap.y = 100;
+  tap.running = true;
+}
 
 // Constant to allow debugging of values server-side
 var DEBUG = true;
@@ -82,7 +92,8 @@ io.sockets.on('connection', function(socket) {
 setInterval(function() {
   var pack = {
     player:Player.update(),
-    projectile:Projectile.update()
+    projectile:Projectile.update(),
+    tap:Tap.update()
   }
 
   // Send the updated info back to update the clients screen

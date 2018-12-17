@@ -23,6 +23,9 @@
     for(var i = 0; i < data.projectile.length; i++)
       gameboard.fillRect(data.projectile[i].x-2, data.projectile[i].y-2, 4, 4);
 
+    for(var i = 0; i < data.tap.length; i++)
+      gameboard.fillRect(data.tap[i].x-5, data.tap[i].y-5, 10, 10);
+
   });
 
   socket.on('evalAnswer', function(data) {

@@ -7,12 +7,12 @@ Projectile = function(angle) {
   self.spdX = Math.cos(angle/180*Math.PI) * 10;
   self.spdY = Math.sin(angle/180*Math.PI) * 10;
 
-  // Set up timer to remove the projectile after 100 frames
+  // Set up timer to remove the projectile after 10 frames
   self.timer = 0;
   self.toRemove = false;
   var superUpdate = self.update;
   self.update = function() {
-    if(self.timer++ > 100)
+    if(self.timer++ > 10)
       self.toRemove = true;
     superUpdate();
   }
@@ -22,9 +22,6 @@ Projectile = function(angle) {
 }
 
 Projectile.update = function() {
-  //Create random bullets with random directions (testing)
-  if(Math.random() < 0.2)
-    Projectile(Math.random()*360);
 
   // Data to send back to the client
   var pack = [];
