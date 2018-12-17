@@ -10,7 +10,8 @@
   var debugInput = document.getElementById('debug-input');
   var debugForm = document.getElementById('debug-form');
 
-  var gameboard = document.getElementById("gameboard").getContext("2d");
+  var canvas = document.getElementById("gameboard");
+  var gameboard = canvas.getContext("2d");
   gameboard.font = '20px Arial';
   var socket = io();
 
@@ -23,8 +24,18 @@
     for(var i = 0; i < data.projectile.length; i++)
       gameboard.fillRect(data.projectile[i].x-2, data.projectile[i].y-2, 4, 4);
 
-    for(var i = 0; i < data.tap.length; i++)
+    for(var i = 0; i < data.tap.length; i++) {
+      // Add each Tap to the elements array, as there will be onclick events associated with them
+      elements.push({
+        left: data.tap[i].x-5,
+        top: data.tap[i].y-5,
+        width: 10,
+        height: 10,
+        id: "tap" + i
+      });
+      // Then draw them onto the canvas
       gameboard.fillRect(data.tap[i].x-5, data.tap[i].y-5, 10, 10);
+    }
 
   });
 
@@ -63,4 +74,20 @@
     if(event.keyCode === 68) //d
       socket.emit('keyPress',{inputId:'right',state:false});
   }
+
+  var elements = [];
+  // When the mouse is clicked over the canvas
+  canvas.addEventListener('click', function (event) {
+    var canvasLeft = canvas.offsetLeft;
+    var canvasTop = canvas.offsetTop;
+    var pageX = event.pageX - canvasLeft;
+    var pageY = event.pageY - canvasTop;
+
+    // If the mouse click was over the top of one of the elements
+  elements.forEach(function (element) {
+    if(y > element.top && pageY < element.top + element.height && pageX > element.left && pageX < element.left + element.width) {
+      console.log(element.id);
+    }
+  });
+}, false);
 </script>
