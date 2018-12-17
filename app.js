@@ -43,6 +43,9 @@ var Player = function(id) {
   return self;
 }
 
+// Constant to allow debugging of values server-side
+var DEBUG = true;
+
 var io = require('socket.io')(serv,{});
 io.sockets.on('connection', function(socket) {
   // Give the client an ID (temporary functionality)
@@ -58,6 +61,21 @@ io.sockets.on('connection', function(socket) {
   socket.on('disconnect',function(){
     delete SOCKET_LIST[socket.id];
     delete PLAYER_LIST[socket.id];
+  });
+
+  // User input for evaluation variables server-side for debugging
+  socket.on('evalServer', function(data){
+    // If the debugging constant is false then we don't want user input being evaluated
+    if(!DEBUG)
+      return;
+    // If the input can be evaluated then respond with the info
+    try {
+      var res = eval(data);
+    } catch(e) {
+      res = e.message;
+    }
+    // Return the eval
+    socket.emit('evalAnswer',res);
   });
 
   // When recieving key press information, change the directional state

@@ -1,18 +1,38 @@
 <canvas id="gameboard" width="500" height="500" style="border:1px solid #000000;"></canvas>
+
+<form id="debug-form">
+  <input id="debug-input" type="text" stylle="width:500px"></input>
+</form>
+
 <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
 
 <script>
+  var debugInput = document.getElementById('debug-input');
+  var debugForm = document.getElementById('debug-form');
+
   var gameboard = document.getElementById("gameboard").getContext("2d");
   gameboard.font = '20px Arial';
   var socket = io();
 
   // When the server sends back the new positions datapack, update the canvas
-  socket.on('newPositions',function(data){
+  socket.on('newPositions',function(data) {
     gameboard.clearRect(0, 0, 500, 500);
     for(var i = 0; i < data.length; i++) {
       gameboard.fillText(data[i].number, data[i].x, data[i].y);
     }
   });
+
+  socket.on('evalAnswer', function(data) {
+    console.log(data);
+  });
+
+  debugForm.onsubmit = function(e) {
+    // Don't refresh on submit
+    e.preventDefault();
+    // Send the target value (to be evaluated) to the server
+    socket.emit('evalServer', debugInput.value);
+    debugInput.value = '';
+  }
 
   // Listen for the WASD keydown & report changes
   document.onkeydown = function(event) {
