@@ -20,9 +20,7 @@ Tap = function(id, owner, xPos, yPos) {
 
   self.checkRunning = function() {
     if(self.running){
-      var projectile = Projectile(Math.random()*180);
-      projectile.x = self.x;
-      projectile.y = self.y;
+      var projectile = Projectile(self.owner, Math.random()*180, self.x, self.y);
     }
   }
   Tap.list[id] = self;

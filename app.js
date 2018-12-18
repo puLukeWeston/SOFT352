@@ -59,7 +59,6 @@ io.sockets.on('connection', function(socket) {
   // When a player connects, call this function to create a new Player
   Player.onConnect(socket, assignment);
 
-  console.log("creating new elements " + socket.id);
   createElements(assignment, socket.id);
 
   // If the client disconnects

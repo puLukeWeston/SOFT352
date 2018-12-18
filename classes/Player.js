@@ -64,6 +64,22 @@ Player.onDisconnect = function(socket) {
   delete Player.list[socket.id];
 }
 
+// Projectile was calling Player.update and it was sending the speed into overdrive
+// as it was calling player.update() hundreds of times in a few seconds. This is a temp
+// fix. TODO: add param to Player.update to optionally not call player.update().
+Player.getLocations = function() {
+  var pack = [];
+  for(var i in Player.list) {
+    var player = Player.list[i];
+    pack.push({
+      x:player.x,
+      y:player.y,
+      assignment:player.assignment
+    });
+  }
+  return pack;
+}
+
 Player.update = function() {
   // Data to send back to the client
   var pack = [];

@@ -21,7 +21,6 @@
   socket.on('startPositions', function(data) {
 
     assignment = data.assignment;
-    console.log(assignment);
 
     for(var i = 0; i < data.tap.length; i++) {
       // Add each Tap to the elements array, as there will be onclick events associated with them
