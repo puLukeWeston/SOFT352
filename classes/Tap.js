@@ -1,21 +1,24 @@
 var entity = require('./Entity.js');
 var projectile = require('./Projectile.js');
 
-Tap = function(id) {
+Tap = function(id, owner, xPos, yPos) {
   var self = Entity();
   // Overwrite the default entity attributes
   self.id = id;
-// Add Tap specific defaults
+  self.x = xPos;
+  self.y = yPos;
+  // Add Tap specific defaults
   self.recharging = false;
   self.running = false;
+  self.owner = owner;
 
   var superUpdate = self.update;
   self.update = function() {
-    self.checkSpraying();
+    self.checkRunning();
     superUpdate();
   }
 
-  self.checkSpraying = function() {
+  self.checkRunning = function() {
     if(self.running){
       var projectile = Projectile(Math.random()*180);
       projectile.x = self.x;
@@ -38,7 +41,8 @@ Tap.update = function() {
       x:tap.x,
       y:tap.y,
       id:tap.id,
-      running:tap.running
+      running:tap.running,
+      owner:tap.owner
     });
   }
   return pack;

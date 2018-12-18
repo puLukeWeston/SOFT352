@@ -15,10 +15,15 @@
   gameboard.font = '20px Arial';
   var socket = io();
 
+  var assignment = "";
+  var elements = [];
+
   socket.on('startPositions', function(data) {
-    console.log("Starting postions" + data.tap.length);
+
+    assignment = data.assignment;
+    console.log(assignment);
+
     for(var i = 0; i < data.tap.length; i++) {
-      console.log("loops" + data.tap[i].x);
       // Add each Tap to the elements array, as there will be onclick events associated with them
       elements.push({
         left: data.tap[i].x-5,
@@ -26,7 +31,8 @@
         width: 10,
         height: 10,
         id: data.tap[i].id,
-        running: data.tap[i].running
+        running: data.tap[i].running,
+        owner:data.tap[i].owner
       });
 
       // Then draw them onto the canvas
@@ -36,14 +42,18 @@
 
   // When the server sends back the new positions datapack, update the canvas
   socket.on('newPositions',function(data) {
+    // Clear the gameboard
     gameboard.clearRect(0, 0, 500, 500);
-    for(var i = 0; i < elements.length; i++) {
-      gameboard.fillRect(elements[i].left, elements[i].top, 10, 10);
-    }
 
+    // Add the objects back to their original positions
+    for(var i = 0; i < elements.length; i++)
+      gameboard.fillRect(elements[i].left, elements[i].top, elements[i].width, elements[i].height);
+
+    // Draw the players in their new positions
     for(var i = 0; i < data.player.length; i++)
       gameboard.fillText(data.player[i].assignment, data.player[i].x, data.player[i].y);
 
+    // Draw any projectiles in their new positions
     for(var i = 0; i < data.projectile.length; i++)
       gameboard.fillRect(data.projectile[i].x-2, data.projectile[i].y-2, 4, 4);
 
@@ -85,34 +95,36 @@
       socket.emit('keyPress',{inputId:'right', state:false});
   }
 
-  var elements = [];
-
   // When the mouse is clicked over the canvas
   canvas.addEventListener('click', function(event) {
     var canvasLeft = canvas.offsetLeft;
     var canvasTop = canvas.offsetTop;
     var pageX = event.pageX - canvasLeft;
     var pageY = event.pageY - canvasTop;
-    console.log(pageX,pageY);
+
     // If the mouse click was over the top of one of the elements
     elements.forEach(function (element) {
       if(pageY > element.top && pageY < element.top + element.height && pageX > element.left && pageX < element.left + element.width) {
 
-          if(!element.running) {
-            setTimeout(function() {
-              twistTap(element.id, "off");
-              element.running = false;
-            }, 15000);
-
-            element.running = true;
-            twistTap(element.id, "on");
-          }
+        // If the elements isn't already in use and is owned by the user
+        if(!element.running && (assignment === element.owner || element.owner === "E")) {
+          // Set a Timeout to turn the element off in 15 seconds
+          setTimeout(function() {
+            twistTap(element.id, "off");
+            element.running = false;
+          }, 15000);
+          // Turn the element on
+          element.running = true;
+          twistTap(element.id, "on");
+        } else {
+          console.log("You cant use that");
+        }
       }
     });
   }, false);
 
+  // Send the server the players interaction with a Tap
   function twistTap(element, direction) {
     socket.emit('twistTap',{id:element, direction:direction});
-    console.log("Owch");
   }
 </script>

@@ -59,17 +59,8 @@ io.sockets.on('connection', function(socket) {
   // When a player connects, call this function to create a new Player
   Player.onConnect(socket, assignment);
 
-  var tap = Tap(1);
-  tap.x = 100;
-  tap.y = 100;
-
-  var pack = {
-    tap:Tap.update()
-  }
-  for(var i in SOCKET_LIST) {
-    var socket = SOCKET_LIST[i];
-    socket.emit('startPositions', pack);
-  }
+  console.log("creating new elements " + socket.id);
+  createElements(assignment, socket.id);
 
   // If the client disconnects
   socket.on('disconnect',function(){
@@ -107,6 +98,17 @@ io.sockets.on('connection', function(socket) {
     }
   });
 });
+
+function createElements(assignment, id) {
+  var tap = Tap(1, "M", 100, 100);
+
+  var pack = {
+    tap:Tap.update(),
+    assignment:assignment
+  }
+  var socket = SOCKET_LIST[id];
+  socket.emit('startPositions', pack);
+}
 
 setInterval(function() {
   var pack = {
