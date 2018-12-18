@@ -1,7 +1,7 @@
-<canvas id="gameboard" width="500" height="500" style="border:1px solid #000000;"></canvas>
+<canvas id="gameboard" width="750" height="500" style="border:1px solid #000000;"></canvas>
 
 <form id="debug-form">
-  <input id="debug-input" type="text" style="width:500px"></input>
+  <input id="debug-input" type="text" style="width:750px"></input>
 </form>
 
 <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
@@ -13,6 +13,17 @@
   var canvas = document.getElementById("gameboard");
   var gameboard = canvas.getContext("2d");
   gameboard.font = '20px Arial';
+
+  var Img = {};
+  Img.map = new Image();
+  Img.map.src = '/client/img/Floorplan.png';
+  Img.cat = new Image();
+  Img.cat.src = '/client/img/Cat16.png';
+  Img.mouse = new Image();
+  Img.mouse.src = '/client/img/Mouse16.png';
+
+  //gameboard.drawImage(Img.Map,0,0);
+
   var socket = io();
 
   var assignment = "";
@@ -42,15 +53,26 @@
   // When the server sends back the new positions datapack, update the canvas
   socket.on('newPositions',function(data) {
     // Clear the gameboard
-    gameboard.clearRect(0, 0, 500, 500);
-
+    gameboard.clearRect(0, 0, 750, 500);
+    drawMap();
     // Add the objects back to their original positions
     for(var i = 0; i < elements.length; i++)
       gameboard.fillRect(elements[i].left, elements[i].top, elements[i].width, elements[i].height);
 
     // Draw the players in their new positions
-    for(var i = 0; i < data.player.length; i++)
-      gameboard.fillText(data.player[i].assignment, data.player[i].x, data.player[i].y);
+    for(var i = 0; i < data.player.length; i++) {
+      //TODO: Neaten this up into something more OO based
+      if(data.player[i].assignment === "C") {
+        var width = Img.cat.width*2;
+        var height = Img.cat.height * 2;
+        gameboard.drawImage(Img.cat, 0, 0, Img.cat.width, Img.cat.height, data.player[i].x - width/2, data.player[i].y - height/2, width, height);
+      } else if(data.player[i].assignment === "M") {
+        var width = Img.mouse.width*2;
+        var height = Img.mouse.height * 2;
+        gameboard.drawImage(Img.mouse, 0, 0, Img.mouse.width, Img.mouse.height, data.player[i].x - width/2, data.player[i].y - height/2, width, height);
+      }
+    }
+      //gameboard.fillText(data.player[i].assignment, data.player[i].x, data.player[i].y);
 
     // Draw any projectiles in their new positions
     for(var i = 0; i < data.projectile.length; i++)
@@ -68,6 +90,10 @@
     // Send the target value (to be evaluated) to the server
     socket.emit('evalServer', debugInput.value);
     debugInput.value = '';
+  }
+
+  var drawMap = function() {
+    gameboard.drawImage(Img.map,0,0);
   }
 
   // Listen for the WASD keydown & report changes

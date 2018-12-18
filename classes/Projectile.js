@@ -29,7 +29,10 @@ Projectile = function(parent, angle, posX, posY) {
       if(self.getDistance(p) < 16 && self.parent !== p.assignment) {
          //TODO: sort out speed adjustments
          self.toRemove = true;
-         console.log("Hit!");
+         console.log("Owch!");
+      } else if(self.getDistance(p) < 16 && self.parent === p.assignment){
+        self.toRemove = true;
+        console.log("Immunity");
       }
     }
   }
