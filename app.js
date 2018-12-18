@@ -19,15 +19,6 @@ Player.list = {};
 Projectile.list = {};
 Tap.list = {};
 
-createObstacles();
-
-function createObstacles() {
-  var tap = Tap(1);
-  tap.x = 100;
-  tap.y = 100;
-  tap.running = true;
-}
-
 // Constant to allow debugging of values server-side
 var DEBUG = true;
 var count = 0;
@@ -51,8 +42,9 @@ io.sockets.on('connection', function(socket) {
   } else {
     // Loop through the clients and string them together
     var clients = "";
-    for(var i in Player.list)
+    for(var i in Player.list) {
       clients += Player.list[i].assignment;
+    }
 
     // If the String contains both a C and an M, don't assign the client to anything
     if(clients.indexOf("M") > -1 && clients.indexOf("C") > -1)
@@ -66,6 +58,18 @@ io.sockets.on('connection', function(socket) {
 
   // When a player connects, call this function to create a new Player
   Player.onConnect(socket, assignment);
+
+  var tap = Tap(1);
+  tap.x = 100;
+  tap.y = 100;
+
+  var pack = {
+    tap:Tap.update()
+  }
+  for(var i in SOCKET_LIST) {
+    var socket = SOCKET_LIST[i];
+    socket.emit('startPositions', pack);
+  }
 
   // If the client disconnects
   socket.on('disconnect',function(){
@@ -86,6 +90,21 @@ io.sockets.on('connection', function(socket) {
     }
     // Return the eval
     socket.emit('evalAnswer',res);
+  });
+
+  socket.on('twistTap', function(data) {
+    var targetTap;
+    for(var i in Tap.list) {
+      if(data.id === Tap.list[i].id)
+        targetTap = Tap.list[i];
+    }
+    if(data.direction === "on") {
+      targetTap.running = true;
+      console.log("Tap on");
+    } else if(data.direction === "off") {
+      targetTap.running = false;
+      console.log("Tap off");
+    }
   });
 });
 

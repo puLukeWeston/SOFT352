@@ -22,9 +22,7 @@ Tap = function(id) {
       projectile.y = self.y;
     }
   }
-
   Tap.list[id] = self;
-
   return self;
 }
 
@@ -39,6 +37,8 @@ Tap.update = function() {
     pack.push({
       x:tap.x,
       y:tap.y,
+      id:tap.id,
+      running:tap.running
     });
   }
   return pack;
