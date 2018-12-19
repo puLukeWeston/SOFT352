@@ -103,7 +103,7 @@ function createElements(assignment, id) {
 }
 
 var contentPack = {tap:[]};
-var initPack = {player:[], projectile:[]};
+var initPack = {player:[], projectile:[], tap:[]};
 var removePack = {player:[], projectile:[]};
 
 setInterval(function() {
@@ -123,6 +123,7 @@ setInterval(function() {
 
   initPack.player = [];
   initPack.projectile = [];
+  initPack.tap = [];
   removePack.player = [];
   removePack.projectile = [];
 
@@ -223,14 +224,16 @@ Player.onConnect = function(socket, assignment) {
       player.pressingDown = data.state;
   });
 
-  socket.emit('content', {
+  socket.emit('init', {
+    selfId:socket.id,
+    player:Player.getAllInitPack(),
+    projectile:Projectile.getAllInitPack(),
     tap:Tap.getAllInitPack()
   });
 
-  socket.emit('init', {
-    player:Player.getAllInitPack(),
-    projectile:Projectile.getAllInitPack(),
-  });
+  //socket.emit('content', {
+  //  tap:Tap.getAllInitPack()
+  //});
 }
 Player.list = {};
 
