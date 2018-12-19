@@ -22,63 +22,155 @@
   Img.mouse = new Image();
   Img.mouse.src = '/client/img/Mouse16.png';
 
-  //gameboard.drawImage(Img.Map,0,0);
-
   var socket = io();
 
   var assignment = "";
   var elements = [];
 
   socket.on('startPositions', function(data) {
+    assignment = data;
+  });
 
-    assignment = data.assignment;
+  var Player = function(initPack){
+    var self = {};
+    self.id = initPack.id;
+    self.x = initPack.x;
+    self.y = initPack.y;
+    self.assignment = initPack.assignment;
+    Player.list[self.id] = self;
+    return self;
+  }
+  Player.list = {};
 
-    for(var i = 0; i < data.tap.length; i++) {
+  var Projectile = function(initPack){
+    var self = {};
+    self.id = initPack.id;
+    self.x = initPack.x;
+    self.y = initPack.y;
+    Projectile.list[self.id] = self;
+    return self;
+  }
+  Projectile.list = {};
+
+  var Tap = function(initPack) {
+    var self = {};
+    self.id = initPack.id,
+    self.x = initPack.x;
+    self.y = initPack.y;
+    self.running = initPack.running;
+    self.recharging = initPack.recharging;
+    self.owner = initPack.owner;
+    Tap.list[self.id] = self;
+    return self;
+  }
+  Tap.list = {};
+
+  socket.on('init',function(data){
+    for(var i = 0 ; i < data.player.length; i++)
+      new Player(data.player[i]);
+
+    for(var i = 0 ; i < data.projectile.length; i++)
+      new Projectile(data.projectile[i]);
+
+    for(var i = 0 ; i < data.tap.length; i++) {
+      new Tap(data.tap[i]);
       // Add each Tap to the elements array, as there will be onclick events associated with them
       elements.push({
+        id: data.tap[i].id,
         left: data.tap[i].x-5,
         top: data.tap[i].y-5,
         width: 10,
         height: 10,
-        id: data.tap[i].id,
         running: data.tap[i].running,
         owner:data.tap[i].owner
       });
+    }
 
-      // Then draw them onto the canvas
-      gameboard.fillRect(data.tap[i].x-5, data.tap[i].y-5, 10, 10);
-      }
   });
 
-  // When the server sends back the new positions datapack, update the canvas
-  socket.on('newPositions',function(data) {
+  socket.on('update',function(data){
+
+    for(var i = 0 ; i < data.player.length; i++){
+      var pack = data.player[i];
+      var p = Player.list[pack.id];
+      if(p){
+        if(pack.x !== undefined)
+          p.x = pack.x;
+        if(pack.y !== undefined)
+          p.y = pack.y;
+      }
+    }
+    for(var i = 0 ; i < data.projectile.length; i++){
+      var pack = data.projectile[i];
+      var p = Projectile.list[data.projectile[i].id];
+      if(p){
+        if(pack.x !== undefined)
+          p.x = pack.x;
+        if(pack.y !== undefined)
+          p.y = pack.y;
+      }
+    }
+    for(var i = 0 ; i < data.player.length; i++){
+      var pack = data.player[i];
+      var t = Tap.list[pack.id];
+      if(t){
+        if(pack.x !== undefined)
+          t.x = pack.x;
+        if(pack.y !== undefined)
+          t.y = pack.y;
+        if(pack.running !== undefined)
+          t.running = pack.running;
+        if(pack.recharging !== undefined)
+          t.recharging = pack.recharging;
+      }
+    }
+  });
+
+  socket.on('remove',function(data){
+    for(var i = 0 ; i < data.player.length; i++)
+      delete Player.list[data.player[i]];
+
+    for(var i = 0 ; i < data.projectile.length; i++)
+      delete Projectile.list[data.projectile[i]];
+
+    for(var i = 0; i < data.tap.length; i++)
+      delete Tap.list[data.tap[i]];
+
+  });
+
+  setInterval(function() {
     // Clear the gameboard
     gameboard.clearRect(0, 0, 750, 500);
     drawMap();
+
+    for(var i in Tap.list)
+      // Then draw them onto the canvas
+      gameboard.fillRect(Tap.list[i].x-5, Tap.list[i].y-5, 10, 10);
+
     // Add the objects back to their original positions
     for(var i = 0; i < elements.length; i++)
       gameboard.fillRect(elements[i].left, elements[i].top, elements[i].width, elements[i].height);
 
     // Draw the players in their new positions
-    for(var i = 0; i < data.player.length; i++) {
+    for(var i in Player.list) {
       //TODO: Neaten this up into something more OO based
-      if(data.player[i].assignment === "C") {
+      if(Player.list[i].assignment === "C") {
         var width = Img.cat.width*2;
         var height = Img.cat.height * 2;
-        gameboard.drawImage(Img.cat, 0, 0, Img.cat.width, Img.cat.height, data.player[i].x - width/2, data.player[i].y - height/2, width, height);
-      } else if(data.player[i].assignment === "M") {
+        gameboard.drawImage(Img.cat, 0, 0, Img.cat.width, Img.cat.height,Player.list[i].x - width/2,Player.list[i].y - height/2, width, height);
+      } else if(Player.list[i].assignment === "M") {
         var width = Img.mouse.width*2;
         var height = Img.mouse.height * 2;
-        gameboard.drawImage(Img.mouse, 0, 0, Img.mouse.width, Img.mouse.height, data.player[i].x - width/2, data.player[i].y - height/2, width, height);
+        gameboard.drawImage(Img.mouse, 0, 0, Img.mouse.width, Img.mouse.height, Player.list[i].x - width/2, Player.list[i].y - height/2, width, height);
       }
     }
-      //gameboard.fillText(data.player[i].assignment, data.player[i].x, data.player[i].y);
+
+    for(var i in Projectile.list)
+      gameboard.fillRect(Projectile.list[i].x-2, Projectile.list[i].y-2, 4, 4);
 
     // Draw any projectiles in their new positions
-    for(var i = 0; i < data.projectile.length; i++)
-      gameboard.fillRect(data.projectile[i].x-2, data.projectile[i].y-2, 4, 4);
 
-  });
+  }, 40);
 
   socket.on('evalAnswer', function(data) {
     console.log(data);
