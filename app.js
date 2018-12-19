@@ -102,9 +102,9 @@ function createElements(assignment, id) {
   socket.emit('startPositions', assignment);
 }
 
-
-var initPack = {player:[], projectile:[], tap:[]};
-var removePack = {player:[], projectile:[], tap:[]};
+var contentPack = {tap:[]};
+var initPack = {player:[], projectile:[]};
+var removePack = {player:[], projectile:[]};
 
 setInterval(function() {
   var pack = {
@@ -123,10 +123,8 @@ setInterval(function() {
 
   initPack.player = [];
   initPack.projectile = [];
-  initPack.tap = [];
   removePack.player = [];
   removePack.projectile = [];
-  removePack.tap = [];
 
 },1000/20);
 
@@ -171,14 +169,27 @@ var Player = function(id, assignment) {
       self.spdY = 0;
     }
 
+    self.getInitPack = function() {
+      return {
+        id:self.id,
+        x:self.x,
+        y:self.y,
+        assignment:self.assignment
+      };
+    }
+
+    self.getUpdatePack = function() {
+      return {
+        id:self.id,
+        x:self.x,
+        y:self.y,
+        assignment:self.assignment
+      };
+    }
+
   Player.list[id] = self;
 
-  initPack.player.push({
-    id:self.id,
-    x:self.x,
-    y:self.y,
-    assignment:self.assignment
-  });
+  initPack.player.push(self.getInitPack());
 
   return self;
 }
@@ -198,9 +209,24 @@ Player.onConnect = function(socket, assignment) {
     if(data.inputId === 'down')
       player.pressingDown = data.state;
   });
+
+  socket.emit('content', {
+    tap:Tap.getAllInitPack()
+  });
+  
+  socket.emit('init', {
+    player:Player.getAllInitPack(),
+    projectile:Projectile.getAllInitPack(),
+  });
 }
 Player.list = {};
 
+Player.getAllInitPack = function() {
+  var players = [];
+  for(var i in Player.list)
+    players.push(Player.list[i].getInitPack());
+  return players;
+}
 
 Player.onDisconnect = function(socket) {
   delete Player.list[socket.id];
@@ -213,12 +239,7 @@ Player.update = function() {
   for(var i in Player.list) {
     var player = Player.list[i];
     player.update();
-    pack.push({
-      id:player.id,
-      x:player.x,
-      y:player.y,
-      assignment:player.assignment
-    });
+    pack.push(player.getUpdatePack());
   }
   return pack;
 }
@@ -256,22 +277,41 @@ var Projectile = function(parent, angle, posX, posY) {
     }
   }
 
+  self.getInitPack = function() {
+    return {
+      id:self.id,
+      x:self.x,
+      y:self.y
+    };
+  }
+
+  self.getUpdatePack = function() {
+    return {
+      id:self.id,
+      x:self.x,
+      y:self.y
+    };
+  }
+
   if(self.toRemove) {
     delete Projectile.list[self.id];
     removePack.projectile.push(self.id);
   } else
     Projectile.list[self.id] = self;
-    initPack.projectile.push({
-      id:self.id,
-      x:self.x,
-      y:self.y
-    });
+    initPack.projectile.push(self.getInitPack());
+
   return self;
 }
 Projectile.list = {};
 
-Projectile.update = function() {
+Projectile.getAllInitPack = function() {
+  var projectiles = [];
+  for(var i in Projectile.list)
+    projectiles.push(Projectile.list[i].getInitPack());
+  return projectiles;
+}
 
+Projectile.update = function() {
   // Data to send back to the client
   var pack = [];
   for(var i in Projectile.list) {
@@ -282,11 +322,7 @@ Projectile.update = function() {
       delete Projectile.list[i];
       removePack.projectile.push(projectile.id);
     } else
-      pack.push({
-        id:projectile.id,
-        x:projectile.x,
-        y:projectile.y,
-      });
+      pack.push(projectile.getUpdatePack());
   }
   return pack;
 }
@@ -315,18 +351,40 @@ var Tap = function(id, owner, xPos, yPos) {
   }
   Tap.list[id] = self;
 
-  initPack.tap.push({
-    id:self.id,
-    x:self.x,
-    y:self.y,
-    running:self.running,
-    recharging:self.recharging,
-    owner:self.owner
-  });
+  self.getInitPack = function() {
+    return {
+      id:self.id,
+      x:self.x,
+      y:self.y,
+      running:self.running,
+      recharging:self.recharging,
+      owner:self.owner
+    };
+  }
+
+  self.getUpdatePack = function() {
+    return {
+      id:self.id,
+      x:self.x,
+      y:self.y,
+      running:self.running,
+      recharging:self.recharging,
+      owner:self.owner
+    };
+  }
+
+  contentPack.tap.push(self.getInitPack());
 
   return self;
 }
 Tap.list = {};
+
+Tap.getAllInitPack = function() {
+  var tap = [];
+  for(var i in Tap.list)
+    tap.push(Tap.list[i].getInitPack());
+  return tap;
+}
 
 Tap.update = function() {
   // Data to send back to the client
@@ -335,13 +393,7 @@ Tap.update = function() {
     var tap = Tap.list[i];
     tap.update();
 
-    pack.push({
-      x:tap.x,
-      y:tap.y,
-      id:tap.id,
-      running:tap.running,
-      owner:tap.owner
-    });
+    pack.push(tap.getUpdatePack());
   }
   return pack;
 }

@@ -65,15 +65,10 @@
   }
   Tap.list = {};
 
-  socket.on('init',function(data){
-    for(var i = 0 ; i < data.player.length; i++)
-      new Player(data.player[i]);
-
-    for(var i = 0 ; i < data.projectile.length; i++)
-      new Projectile(data.projectile[i]);
-
+  socket.on('content', function(data) {
     for(var i = 0 ; i < data.tap.length; i++) {
       new Tap(data.tap[i]);
+      console.log("Pushing element" + i);
       // Add each Tap to the elements array, as there will be onclick events associated with them
       elements.push({
         id: data.tap[i].id,
@@ -85,12 +80,19 @@
         owner:data.tap[i].owner
       });
     }
-
   });
 
-  socket.on('update',function(data){
+  socket.on('init', function(data) {
+    for(var i = 0 ; i < data.player.length; i++)
+      new Player(data.player[i]);
 
-    for(var i = 0 ; i < data.player.length; i++){
+    for(var i = 0 ; i < data.projectile.length; i++)
+      new Projectile(data.projectile[i]);
+  });
+
+  socket.on('update', function(data) {
+
+    for(var i = 0; i < data.player.length; i++) {
       var pack = data.player[i];
       var p = Player.list[pack.id];
       if(p){
@@ -100,7 +102,7 @@
           p.y = pack.y;
       }
     }
-    for(var i = 0 ; i < data.projectile.length; i++){
+    for(var i = 0; i < data.projectile.length; i++) {
       var pack = data.projectile[i];
       var p = Projectile.list[data.projectile[i].id];
       if(p){
@@ -110,7 +112,7 @@
           p.y = pack.y;
       }
     }
-    for(var i = 0 ; i < data.player.length; i++){
+    for(var i = 0; i < data.player.length; i++) {
       var pack = data.player[i];
       var t = Tap.list[pack.id];
       if(t){
@@ -126,16 +128,12 @@
     }
   });
 
-  socket.on('remove',function(data){
-    for(var i = 0 ; i < data.player.length; i++)
+  socket.on('remove', function(data) {
+    for(var i = 0; i < data.player.length; i++)
       delete Player.list[data.player[i]];
 
-    for(var i = 0 ; i < data.projectile.length; i++)
+    for(var i = 0; i < data.projectile.length; i++)
       delete Projectile.list[data.projectile[i]];
-
-    for(var i = 0; i < data.tap.length; i++)
-      delete Tap.list[data.tap[i]];
-
   });
 
   setInterval(function() {
