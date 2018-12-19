@@ -37,6 +37,25 @@
     self.x = initPack.x;
     self.y = initPack.y;
     self.assignment = initPack.assignment;
+    self.spd = initPack.spd;
+    self.maxSpd = initPack.maxSpd;
+    self.score = initPack.score;
+
+    self.draw = function() {
+      var spdWidth = 30 * self.spd / self.maxSpd;
+      gameboard.fillRect(self.x - spdWidth/2, self.y + 30, spdWidth, 4);
+
+      if(self.assignment === "C") {
+        var width = Img.cat.width*2;
+        var height = Img.cat.height * 2;
+        gameboard.drawImage(Img.cat, 0, 0, Img.cat.width, Img.cat.height, self.x - width/2, self.y - height/2, width, height);
+      } else if(self.assignment === "M") {
+        var width = Img.mouse.width*2;
+        var height = Img.mouse.height * 2;
+        gameboard.drawImage(Img.mouse, 0, 0, Img.mouse.width, Img.mouse.height, self.x - width/2, self.y - height/2, width, height);
+      }
+    }
+
     Player.list[self.id] = self;
     return self;
   }
@@ -47,6 +66,11 @@
     self.id = initPack.id;
     self.x = initPack.x;
     self.y = initPack.y;
+
+    self.draw = function() {
+      gameboard.fillRect(self.x-2, self.y-2, 4, 4);
+    }
+
     Projectile.list[self.id] = self;
     return self;
   }
@@ -68,7 +92,6 @@
   socket.on('content', function(data) {
     for(var i = 0 ; i < data.tap.length; i++) {
       new Tap(data.tap[i]);
-      console.log("Pushing element" + i);
       // Add each Tap to the elements array, as there will be onclick events associated with them
       elements.push({
         id: data.tap[i].id,
@@ -91,7 +114,6 @@
   });
 
   socket.on('update', function(data) {
-
     for(var i = 0; i < data.player.length; i++) {
       var pack = data.player[i];
       var p = Player.list[pack.id];
@@ -100,8 +122,13 @@
           p.x = pack.x;
         if(pack.y !== undefined)
           p.y = pack.y;
+        if(pack.spd !== undefined)
+          p.spd = pack.spd;
+        if(pack.score !== undefined)
+          p.score = pack.score;
       }
     }
+
     for(var i = 0; i < data.projectile.length; i++) {
       var pack = data.projectile[i];
       var p = Projectile.list[data.projectile[i].id];
@@ -112,6 +139,7 @@
           p.y = pack.y;
       }
     }
+
     for(var i = 0; i < data.player.length; i++) {
       var pack = data.player[i];
       var t = Tap.list[pack.id];
@@ -150,21 +178,11 @@
       gameboard.fillRect(elements[i].left, elements[i].top, elements[i].width, elements[i].height);
 
     // Draw the players in their new positions
-    for(var i in Player.list) {
-      //TODO: Neaten this up into something more OO based
-      if(Player.list[i].assignment === "C") {
-        var width = Img.cat.width*2;
-        var height = Img.cat.height * 2;
-        gameboard.drawImage(Img.cat, 0, 0, Img.cat.width, Img.cat.height,Player.list[i].x - width/2,Player.list[i].y - height/2, width, height);
-      } else if(Player.list[i].assignment === "M") {
-        var width = Img.mouse.width*2;
-        var height = Img.mouse.height * 2;
-        gameboard.drawImage(Img.mouse, 0, 0, Img.mouse.width, Img.mouse.height, Player.list[i].x - width/2, Player.list[i].y - height/2, width, height);
-      }
-    }
+    for(var i in Player.list)
+      Player.list[i].draw();
 
     for(var i in Projectile.list)
-      gameboard.fillRect(Projectile.list[i].x-2, Projectile.list[i].y-2, 4, 4);
+      Projectile.list[i].draw();
 
     // Draw any projectiles in their new positions
 

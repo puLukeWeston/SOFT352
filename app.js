@@ -143,7 +143,9 @@ var Player = function(id, assignment) {
   self.pressingLeft = false;
   self.pressingUp = false;
   self.pressingDown = false;
+  self.spd = 10;
   self.maxSpd = 10;
+  self.score = 0;
 
   // Overwrite the update function
   var superUpdate = self.update;
@@ -155,18 +157,24 @@ var Player = function(id, assignment) {
   // Used to move the players character based on recieved key press info
   self.updateSpd = function() {
     if(self.pressingRight)
-      self.spdX = self.maxSpd;
+      self.spdX = self.spd;
     else if(self.pressingLeft)
-      self.spdX = -self.maxSpd;
+      self.spdX = -self.spd;
     else
       self.spdX = 0;
 
     if(self.pressingUp)
-      self.spdY = -self.maxSpd;
+      self.spdY = -self.spd;
     else if(self.pressingDown)
-      self.spdY = self.maxSpd;
+      self.spdY = self.spd;
     else
       self.spdY = 0;
+    if(self.spd < self.maxSpd) {
+      setTimeout(function() {
+        if(self.spd + 0.2 <= self.maxSpd)
+          self.spd += 0.2;
+      }, 7500);
+      }
     }
 
     self.getInitPack = function() {
@@ -174,7 +182,10 @@ var Player = function(id, assignment) {
         id:self.id,
         x:self.x,
         y:self.y,
-        assignment:self.assignment
+        assignment:self.assignment,
+        spd:self.spd,
+        maxSpd:self.maxSpd,
+        score:self.score
       };
     }
 
@@ -183,7 +194,9 @@ var Player = function(id, assignment) {
         id:self.id,
         x:self.x,
         y:self.y,
-        assignment:self.assignment
+        assignment:self.assignment,
+        spd:self.spd,
+        score:self.score
       };
     }
 
@@ -213,7 +226,7 @@ Player.onConnect = function(socket, assignment) {
   socket.emit('content', {
     tap:Tap.getAllInitPack()
   });
-  
+
   socket.emit('init', {
     player:Player.getAllInitPack(),
     projectile:Projectile.getAllInitPack(),
@@ -267,9 +280,12 @@ var Projectile = function(parent, angle, posX, posY) {
     for(i in Player.list) {
       var p = Player.list[i];
       if(self.getDistance(p) < 16 && self.parent !== p.assignment) {
-         //TODO: sort out speed adjustments
-         self.toRemove = true;
-         console.log("Owch!");
+        if(p.spd > p.maxSpd * 0.66) {
+          p.spd -= 0.2;
+        }
+
+        self.toRemove = true;
+        console.log("Owch!");
       } else if(self.getDistance(p) < 16 && self.parent === p.assignment){
         self.toRemove = true;
         console.log("Immunity");
