@@ -94,6 +94,21 @@ io.sockets.on('connection', function(socket) {
       console.log("Tap off");
     }
   });
+
+  socket.on('playerCollision', function(data) {
+    var id = data.playerId;
+    var x = data.playerX;
+    var y = data.playerY;
+    for(var i in Player.list) {
+      var player = Player.list[i];
+      if(player.id === id) {
+        console.log(player.assignment + "had a wall collision");
+        player.x = x;
+        player.y = y;
+      }
+    }
+  });
+  
 });
 
 function createElements(assignment, id) {
@@ -170,6 +185,7 @@ var Player = function(id, assignment) {
       self.spdY = self.spd;
     else
       self.spdY = 0;
+
     if(self.spd < self.maxSpd) {
       setTimeout(function() {
         if(self.spd + 0.2 <= self.maxSpd)
@@ -230,10 +246,6 @@ Player.onConnect = function(socket, assignment) {
     projectile:Projectile.getAllInitPack(),
     tap:Tap.getAllInitPack()
   });
-
-  //socket.emit('content', {
-  //  tap:Tap.getAllInitPack()
-  //});
 }
 Player.list = {};
 
