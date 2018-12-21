@@ -1,9 +1,7 @@
 var express = require('express');
 var app = express();
 var serv = require('http').Server(app);
-var player = require('./classes/Player.js');
-var projectile = require('./classes/Projectile.js');
-var tap = require('./classes/Tap.js');
+var entity = require('./classes/Entity.js');
 
 app.get('/',function(req, res) {
   res.sendFile(__dirname + '/client/index.html');
@@ -56,7 +54,7 @@ io.sockets.on('connection', function(socket) {
   // When a player connects, call this function to create a new Player
   Player.onConnect(socket, assignment);
 
-  createElements(assignment, socket.id);
+  Tap(1, "M", 100, 100);
 
   // If the client disconnects
   socket.on('disconnect',function(){
@@ -80,42 +78,39 @@ io.sockets.on('connection', function(socket) {
     socket.emit('evalAnswer',res);
   });
 
+  //  When a Player clicks on a Tap that belongs to their assignment, it emits a 'twistTap'
   socket.on('twistTap', function(data) {
     var targetTap;
     for(var i in Tap.list) {
       if(data.id === Tap.list[i].id)
         targetTap = Tap.list[i];
     }
+    // Turn the Taps running condition to true or false depending on the direction passed
     if(data.direction === "on") {
       targetTap.running = true;
-      console.log("Tap on");
     } else if(data.direction === "off") {
       targetTap.running = false;
-      console.log("Tap off");
     }
   });
 
+  // If a Player collides with a wall, it emits a 'playerCollision'
   socket.on('playerCollision', function(data) {
+    // The ID of the player who has collided
     var id = data.playerId;
+    // The X and the Y position before they had collided with a wall
     var x = data.playerX;
     var y = data.playerY;
+    // Revert the Players X/Y to back before they hit a wall
     for(var i in Player.list) {
       var player = Player.list[i];
       if(player.id === id) {
-        console.log(player.assignment + "had a wall collision");
         player.x = x;
         player.y = y;
       }
     }
   });
-  
-});
 
-function createElements(assignment, id) {
-  var tap = Tap(1, "M", 100, 100);
-  var socket = SOCKET_LIST[id];
-  socket.emit('startPositions', assignment);
-}
+});
 
 var contentPack = {tap:[]};
 var initPack = {player:[], projectile:[], tap:[]};
@@ -145,8 +140,7 @@ setInterval(function() {
 },1000/20);
 
 
-// Start of a long days work:
-
+// Create a new Player object
 var Player = function(id, assignment) {
   var self = Entity();
   // Overwrite the default entity attributes
@@ -172,13 +166,14 @@ var Player = function(id, assignment) {
 
   // Used to move the players character based on recieved key press info
   self.updateSpd = function() {
+    // X Axis
     if(self.pressingRight)
       self.spdX = self.spd;
     else if(self.pressingLeft)
       self.spdX = -self.spd;
     else
       self.spdX = 0;
-
+    // Y Axis
     if(self.pressingUp)
       self.spdY = -self.spd;
     else if(self.pressingDown)
@@ -186,6 +181,7 @@ var Player = function(id, assignment) {
     else
       self.spdY = 0;
 
+    // Reverts the effects of being slowed down after 7.5 seconds
     if(self.spd < self.maxSpd) {
       setTimeout(function() {
         if(self.spd + 0.2 <= self.maxSpd)
@@ -194,6 +190,7 @@ var Player = function(id, assignment) {
       }
     }
 
+    // Returns the status' for the Player (sent once)
     self.getInitPack = function() {
       return {
         id:self.id,
@@ -206,6 +203,7 @@ var Player = function(id, assignment) {
       };
     }
 
+    // Returns the status' for the Player (called frequently, so will require more condencing)
     self.getUpdatePack = function() {
       return {
         id:self.id,
@@ -216,9 +214,9 @@ var Player = function(id, assignment) {
         score:self.score
       };
     }
-
+  // Add the newly created Player to the Player.list
   Player.list[id] = self;
-
+  // Also add their info to the initialisation package
   initPack.player.push(self.getInitPack());
 
   return self;
@@ -240,6 +238,7 @@ Player.onConnect = function(socket, assignment) {
       player.pressingDown = data.state;
   });
 
+  // Send the client an initialisation pack of all of the items needed to draw
   socket.emit('init', {
     selfId:socket.id,
     player:Player.getAllInitPack(),
@@ -249,6 +248,7 @@ Player.onConnect = function(socket, assignment) {
 }
 Player.list = {};
 
+// Get and return the initialisation package for all of the connected players
 Player.getAllInitPack = function() {
   var players = [];
   for(var i in Player.list)
@@ -260,6 +260,7 @@ Player.onDisconnect = function(socket) {
   delete Player.list[socket.id];
 }
 
+// Get and return the most up to date information about a players status'
 Player.update = function() {
   // Data to send back to the client
   var pack = [];
@@ -272,11 +273,11 @@ Player.update = function() {
   return pack;
 }
 
-var Projectile = function(parent, angle, posX, posY) {
+var Projectile = function(parent, angle, xPos, yPos) {
   var self = Entity();
   self.id = Math.random();
-  self.x = posX;
-  self.y = posY;
+  self.x = xPos;
+  self.y = yPos;
   // Calculate X & Y speeds
   self.spdX = Math.cos(angle/180*Math.PI) * 10;
   self.spdY = Math.sin(angle/180*Math.PI) * 10;
@@ -294,16 +295,18 @@ var Projectile = function(parent, angle, posX, posY) {
 
     for(i in Player.list) {
       var p = Player.list[i];
+      // If the projectile is in contact with a Player that can be targeted by its creator
       if(self.getDistance(p) < 16 && self.parent !== p.assignment) {
+        // Decrease the players speed by 0.2 until it's at 2/3rds
         if(p.spd > p.maxSpd * 0.66) {
           p.spd -= 0.2;
         }
-
+        // Remove the projectile
         self.toRemove = true;
-        console.log("Owch!");
+        // If the projectile is in contact with a Player that can't be targeted
       } else if(self.getDistance(p) < 16 && self.parent === p.assignment){
+        // Remove the projectile, but don't adjust speed
         self.toRemove = true;
-        console.log("Immunity");
       }
     }
   }
@@ -343,7 +346,6 @@ Projectile.getAllInitPack = function() {
 }
 
 Projectile.update = function() {
-  // Data to send back to the client
   var pack = [];
   for(var i in Projectile.list) {
     var projectile = Projectile.list[i];
@@ -375,12 +377,12 @@ var Tap = function(id, owner, xPos, yPos) {
     superUpdate();
   }
 
+  // If the Tap is "running" it should randomly generate projectiles to spray out
   self.checkRunning = function() {
     if(self.running){
-      var projectile = Projectile(self.owner, Math.random()*180, self.x, self.y);
+      var projectile = Projectile(self.owner, Math.random()*360, self.x, self.y);
     }
   }
-  Tap.list[id] = self;
 
   self.getInitPack = function() {
     return {
@@ -404,8 +406,8 @@ var Tap = function(id, owner, xPos, yPos) {
     };
   }
 
+  Tap.list[id] = self;
   contentPack.tap.push(self.getInitPack());
-
   return self;
 }
 Tap.list = {};
