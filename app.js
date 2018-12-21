@@ -13,6 +13,10 @@ serv.listen(2000);
 console.log("Server Started.");
 
 var SOCKET_LIST = {};
+var MAP_WIDTH = 1200;
+var MAP_HEIGHT = 800;
+var TILE_SIZE = 32;
+
 
 // Constant to allow debugging of values server-side
 var DEBUG = true;
@@ -54,7 +58,8 @@ io.sockets.on('connection', function(socket) {
   // When a player connects, call this function to create a new Player
   Player.onConnect(socket, assignment);
 
-  Tap(1, "M", 100, 100);
+  Tap(1, "M", 1584, 448);
+  Tap(2, "M", 100, 100);
 
   // If the client disconnects
   socket.on('disconnect',function(){
@@ -93,34 +98,14 @@ io.sockets.on('connection', function(socket) {
     }
   });
 
-  // If a Player collides with a wall, it emits a 'playerCollision'
-  socket.on('playerCollision', function(data) {
-    // The ID of the player who has collided
-    var id = data.playerId;
-    // The X and the Y position before they had collided with a wall
-    var x = data.playerX;
-    var y = data.playerY;
-    // Revert the Players X/Y to back before they hit a wall
-    for(var i in Player.list) {
-      var player = Player.list[i];
-      if(player.id === id) {
-        player.x = x;
-        player.y = y;
-      }
-    }
-  });
-
 });
-
-var contentPack = {tap:[]};
-var initPack = {player:[], projectile:[], tap:[]};
-var removePack = {player:[], projectile:[]};
 
 setInterval(function() {
   var pack = {
     player:Player.update(),
     projectile:Projectile.update(),
-    tap:Tap.update()
+    tap:Tap.update(),
+    cheese:Cheese.update()
   }
 
   // Send the updated info back to update the clients screen
@@ -134,10 +119,36 @@ setInterval(function() {
   initPack.player = [];
   initPack.projectile = [];
   initPack.tap = [];
+  initPack.cheese = [];
   removePack.player = [];
   removePack.projectile = [];
+  removePack.cheese = [];
 
 },1000/20);
+
+Maps = function(id, width, height, grid) {
+  var self = {
+    id:id,
+    width:width,
+    height:height,
+    grid:grid
+  };
+
+  self.isPositionWall = function(givenX, givenY) {
+    var gridX = Math.floor(givenX / TILE_SIZE);
+    var gridY = Math.floor(givenY / TILE_SIZE);
+
+    // If the given bounds are colliding with a 1 in the map grid there must be a collision
+    if(gridX < 0 || gridX >= self.grid[0].length)
+      return true;
+    if(gridY < 0 || gridY >= self.grid.length)
+      return true;
+    return self.grid[gridY][gridX];
+
+  }
+
+  return self;
+}
 
 
 // Create a new Player object
@@ -157,11 +168,13 @@ var Player = function(id, assignment) {
   self.maxSpd = 10;
   self.score = 0;
 
-  // Overwrite the update function
-  var superUpdate = self.update;
+  // Overwrite the super update function
   self.update = function() {
     self.updateSpd();
-    superUpdate();
+    if(!currentMap.isPositionWall(self.x + self.spdX, self.y + self.spdY)) {
+      self.x += self.spdX;
+      self.y += self.spdY;
+    }
   }
 
   // Used to move the players character based on recieved key press info
@@ -169,23 +182,24 @@ var Player = function(id, assignment) {
     // X Axis
     if(self.pressingRight)
       self.spdX = self.spd;
-    else if(self.pressingLeft)
-      self.spdX = -self.spd;
-    else
+     else if(self.pressingLeft)
+      self.spdX =- self.spd;
+     else
       self.spdX = 0;
+
     // Y Axis
     if(self.pressingUp)
-      self.spdY = -self.spd;
-    else if(self.pressingDown)
+      self.spdY =- self.spd;
+     else if(self.pressingDown)
       self.spdY = self.spd;
-    else
+     else
       self.spdY = 0;
 
     // Reverts the effects of being slowed down after 7.5 seconds
     if(self.spd < self.maxSpd) {
       setTimeout(function() {
-        if(self.spd + 0.2 <= self.maxSpd)
-          self.spd += 0.2;
+        if(self.spd + 0.5 <= self.maxSpd)
+          self.spd += 0.5;
       }, 7500);
       }
     }
@@ -243,7 +257,9 @@ Player.onConnect = function(socket, assignment) {
     selfId:socket.id,
     player:Player.getAllInitPack(),
     projectile:Projectile.getAllInitPack(),
-    tap:Tap.getAllInitPack()
+    tap:Tap.getAllInitPack(),
+    cheese:Cheese.getAllInitPack(),
+    map:{id:currentMap.id, width:currentMap.width, height:currentMap.height, grid:currentMap.grid}
   });
 }
 Player.list = {};
@@ -287,19 +303,25 @@ var Projectile = function(parent, angle, xPos, yPos) {
   // Set up timer to remove the projectile after 10 frames
   self.timer = 0;
   self.toRemove = false;
-  var superUpdate = self.update;
+
   self.update = function() {
     if(self.timer++ > 10)
       self.toRemove = true;
-    superUpdate();
+
+    if(!currentMap.isPositionWall(self.x + self.spdX, self.y + self.spdY)) {
+      self.x += self.spdX;
+      self.y += self.spdY;
+    } else {
+      self.toRemove = true;
+    }
 
     for(i in Player.list) {
       var p = Player.list[i];
       // If the projectile is in contact with a Player that can be targeted by its creator
       if(self.getDistance(p) < 16 && self.parent !== p.assignment) {
-        // Decrease the players speed by 0.2 until it's at 2/3rds
-        if(p.spd > p.maxSpd * 0.66) {
-          p.spd -= 0.2;
+        // Decrease the players speed by 0.5 until it's at 3/5ths
+        if(p.spd > p.maxSpd * 0.6) {
+          p.spd -= 0.5;
         }
         // Remove the projectile
         self.toRemove = true;
@@ -327,13 +349,8 @@ var Projectile = function(parent, angle, xPos, yPos) {
     };
   }
 
-  if(self.toRemove) {
-    delete Projectile.list[self.id];
-    removePack.projectile.push(self.id);
-  } else
-    Projectile.list[self.id] = self;
-    initPack.projectile.push(self.getInitPack());
-
+  Projectile.list[self.id] = self;
+  initPack.projectile.push(self.getInitPack());
   return self;
 }
 Projectile.list = {};
@@ -371,16 +388,14 @@ var Tap = function(id, owner, xPos, yPos) {
   self.running = false;
   self.owner = owner;
 
-  var superUpdate = self.update;
   self.update = function() {
     self.checkRunning();
-    superUpdate();
   }
 
   // If the Tap is "running" it should randomly generate projectiles to spray out
   self.checkRunning = function() {
     if(self.running){
-      var projectile = Projectile(self.owner, Math.random()*360, self.x, self.y);
+      var projectile = Projectile(self.owner, Math.random()*180, self.x, self.y);
     }
   }
 
@@ -430,3 +445,144 @@ Tap.update = function() {
   }
   return pack;
 }
+
+var Cheese = function(id, x, y) {
+  var self = Entity();
+  self.id = id;
+  self.x = x;
+  self.y = y;
+  self.consumed = false;
+
+  self.update = function() {
+
+    for(i in Player.list) {
+      var p = Player.list[i];
+      // If the cheese is in contact with a Mouse
+      if(self.getDistance(p) < 5 && p.assignment === "M") {
+        // Inrease the players score by 1
+        p.score++;
+        // Remove the cheese
+        self.consumed = true;
+      }
+    }
+
+    self.checkConsumed();
+  }
+
+  self.checkConsumed = function() {
+    if(self.consumed) {
+      delete Cheese.list[i];
+      removePack.cheese.push(self.id);
+    }
+  }
+
+  self.getInitPack = function() {
+    return {
+      id:self.id,
+      x:self.x,
+      y:self.y
+    };
+  }
+
+  self.getUpdatePack = function() {
+    return {
+      id:self.id,
+      x:self.x,
+      y:self.y
+    };
+  }
+
+  Cheese.list[self.id] = self;
+  initPack.cheese.push(self.getInitPack());
+  return self;
+}
+Cheese.list = {};
+
+Cheese.getAllInitPack = function() {
+  var cheese = [];
+  for(var i in Cheese.list)
+    cheese.push(Cheese.list[i].getInitPack());
+  return cheese;
+}
+
+Cheese.update = function() {
+  var pack = [];
+  for(var i in Cheese.list) {
+    var cheese = Cheese.list[i];
+    cheese.update();
+
+    if(cheese.consumed) {
+      delete Cheese.list[i];
+      removePack.cheese.push(cheese.id);
+    }
+  }
+  return pack;
+}
+
+
+currentMap = Maps('blueprints', MAP_WIDTH, MAP_HEIGHT,
+[[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,0,1,1,1,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,1,1,1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]]);
+
+var contentPack = {tap:[]};
+var initPack = {player:[], projectile:[], tap:[], cheese:[], map:{id:currentMap.id, width:currentMap.width, height:currentMap.height, grid:currentMap.grid}};
+var removePack = {player:[], projectile:[], cheese:[]};
+
+createCheese = function() {
+  var j = 100;
+  for(var i = 0; i < MAP_WIDTH * 2; i += 96){
+    for(var j = 0; j < MAP_HEIGHT *2; j += 96) {
+      if(!currentMap.isPositionWall(i, j))
+        var cheese = Cheese(i + " " + j, i, j);
+    }
+  }
+}
+createCheese();
