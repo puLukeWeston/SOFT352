@@ -155,8 +155,13 @@ Maps = function(id, width, height, grid) {
 var Player = function(id, assignment) {
   var self = Entity();
   // Overwrite the default entity attributes
-  self.x = 250;
-  self.y = 250;
+  if(assignment === "C") {
+    self.x = 480;
+    self.y = 580;
+  } else if(assignment === "M") {
+    self.x = 1125;
+    self.y = 965;
+  }
   self.id = id;
   // Add Player specific defaults
   self.assignment = assignment;
@@ -164,9 +169,11 @@ var Player = function(id, assignment) {
   self.pressingLeft = false;
   self.pressingUp = false;
   self.pressingDown = false;
-  self.spd = 10;
-  self.maxSpd = 10;
+  self.spd = 12;
+  self.maxSpd = 15;
   self.score = 0;
+  self.lives = 3;
+  self.cooldown = false;
 
   // Overwrite the super update function
   self.update = function() {
@@ -174,6 +181,32 @@ var Player = function(id, assignment) {
     if(!currentMap.isPositionWall(self.x + self.spdX, self.y + self.spdY)) {
       self.x += self.spdX;
       self.y += self.spdY;
+    }
+
+    for(i in Player.list) {
+      var p = Player.list[i];
+      // If the Cat touches the Mouse
+      if(p.assignment === "M") {
+        if(self.getDistance(p) < TILE_SIZE / 2 && self.assignment === "C" && !self.cooldown) {
+          console.log("The cooldown = " + self.cooldown);
+          p.lives--;
+          if(p.lives == 0) {
+            console.log("Mouse has been caught! Their score was: " + p.score);
+          } else {
+            console.log("Touch!");
+            self.x = 480;
+            self.y = 580;
+            self.cooldown = true;
+            setTimeout(function() {
+              self.cooldown = false;
+              console.log("Cooldown over! Get catching");
+            }, 5000);
+
+          }
+          // Life system? Cat touches mouse three times & wins?
+          // Cooldown on touches
+        }
+      }
     }
   }
 
@@ -318,7 +351,7 @@ var Projectile = function(parent, angle, xPos, yPos) {
     for(i in Player.list) {
       var p = Player.list[i];
       // If the projectile is in contact with a Player that can be targeted by its creator
-      if(self.getDistance(p) < 16 && self.parent !== p.assignment) {
+      if(self.getDistance(p) < TILE_SIZE / 2 && self.parent !== p.assignment) {
         // Decrease the players speed by 0.5 until it's at 3/5ths
         if(p.spd > p.maxSpd * 0.6) {
           p.spd -= 0.5;
@@ -326,7 +359,7 @@ var Projectile = function(parent, angle, xPos, yPos) {
         // Remove the projectile
         self.toRemove = true;
         // If the projectile is in contact with a Player that can't be targeted
-      } else if(self.getDistance(p) < 16 && self.parent === p.assignment){
+      } else if(self.getDistance(p) < TILE_SIZE / 2 && self.parent === p.assignment){
         // Remove the projectile, but don't adjust speed
         self.toRemove = true;
       }
@@ -458,7 +491,7 @@ var Cheese = function(id, x, y) {
     for(i in Player.list) {
       var p = Player.list[i];
       // If the cheese is in contact with a Mouse
-      if(self.getDistance(p) < 5 && p.assignment === "M") {
+      if(self.getDistance(p) < 16 && p.assignment === "M") {
         // Inrease the players score by 1
         p.score++;
         // Remove the cheese
@@ -553,7 +586,7 @@ currentMap = Maps('blueprints', MAP_WIDTH, MAP_HEIGHT,
 [1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
 [1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
 [1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-[1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
 [1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
 [1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
 [1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
@@ -577,9 +610,8 @@ var initPack = {player:[], projectile:[], tap:[], cheese:[], map:{id:currentMap.
 var removePack = {player:[], projectile:[], cheese:[]};
 
 createCheese = function() {
-  var j = 100;
-  for(var i = 0; i < MAP_WIDTH * 2; i += 96){
-    for(var j = 0; j < MAP_HEIGHT *2; j += 96) {
+  for(var i = 50; i < 100 * 2; i += 80){
+    for(var j = 50; j < 100 *2; j += 80) {
       if(!currentMap.isPositionWall(i, j))
         var cheese = Cheese(i + " " + j, i, j);
     }
