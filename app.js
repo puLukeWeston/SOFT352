@@ -1,3 +1,6 @@
+var mongojs = require("mongojs");
+var db = mongojs('localhost:27017/jomAndTerry', ['account']);
+
 var express = require('express');
 var app = express();
 var serv = require('http').Server(app);
@@ -17,9 +20,30 @@ var MAP_WIDTH = 1200;
 var MAP_HEIGHT = 800;
 var TILE_SIZE = 32;
 
+var isValidPassword = function(data, cb) {
+  db.account.find({username:data.username, password:data.password}, function(err, res) {
+    if(res[0])
+      cb(true);
+    else
+      cb(false);
+  });
+}
 
-// Constant to allow debugging of values server-side
-var DEBUG = true;
+var isUsernameTaken = function(data, cb) {
+  db.account.find({username:data.username}, function(err, res) {
+    if(res[0])
+      cb(true);
+    else
+      cb(false);
+  });
+}
+
+var addUser = function(data, cb) {
+  db.account.insert({username:data.username, password:data.password}, function(err, res) {
+    cb();
+  });
+}
+
 var count = 0;
 var io = require('socket.io')(serv,{});
 io.sockets.on('connection', function(socket) {
@@ -27,60 +51,48 @@ io.sockets.on('connection', function(socket) {
   socket.id = Math.random();
   SOCKET_LIST[socket.id] = socket;
 
-  // Either a cat or a mouse
-  var assignment = "";
-  // If this was the first connection to the server, default to cat
-  if(count === 0) {
-    assignment = "C";
-    count++;
-    // If its the second, default to mouse
-  } else if(count < 2) {
-    assignment = "M";
-    count++;
-    // If there have been more than 2 connections
-  } else {
-    // Loop through the clients and string them together
-    var clients = "";
-    for(var i in Player.list) {
-      clients += Player.list[i].assignment;
-    }
+  socket.on('signUp', function(data) {
+    isUsernameTaken(data, function(res) {
+      if(res)
+        socket.emit('signUpResponse', {success:false});
+      else {
+        addUser(data, function() {
+          socket.emit('signUpResponse', {success:true});
+        });
+      }
+    });
+  });
 
-    // If the String contains both a C and an M, don't assign the client to anything
-    if(clients.indexOf("M") > -1 && clients.indexOf("C") > -1)
-      console.log("Already have two clients");
-    // If just an M exists, assign the client to cat (and vice versa)
-    else if(clients.indexOf("M") > -1)
-      assignment = "C";
-    else
-      assignment = "M";
-  }
+  socket.on('login', function(data) {
+    isValidPassword(data, function(res) {
+      if(res) {
+        socket.emit('loginResponse', {success:true});
+        var assignment = "M";
+        var clients = "";
+        for(var i in Player.list) {
+          clients += Player.list[i].assignment;
+        }
 
-  // When a player connects, call this function to create a new Player
-  Player.onConnect(socket, assignment);
+        // If the String contains both a C and an M, don't assign the client to anything
+        if(clients.indexOf("M") > -1 && clients.indexOf("C") > -1) {
+          console.log("Already have two clients");
+          removePack.player.push(socket.id);
+          delete Player.list[socket.id];
+        } else if(clients.indexOf("M") > -1)
+            assignment = "C";
 
-  Tap(1, "M", 1584, 448);
-  Tap(2, "M", 100, 100);
+        Player.onConnect(socket, assignment);
+
+      } else
+          socket.emit('loginResponse', {success:false});
+    });
+  });
 
   // If the client disconnects
   socket.on('disconnect',function(){
     delete SOCKET_LIST[socket.id];
     Player.onDisconnect(socket);
     removePack.player.push(socket.id);
-  });
-
-  // User input for evaluation variables server-side for debugging
-  socket.on('evalServer', function(data){
-    // If the debugging constant is false then we don't want user input being evaluated
-    if(!DEBUG)
-      return;
-    // If the input can be evaluated then respond with the info
-    try {
-      var res = eval(data);
-    } catch(e) {
-      res = e.message;
-    }
-    // Return the eval
-    socket.emit('evalAnswer',res);
   });
 
   //  When a Player clicks on a Tap that belongs to their assignment, it emits a 'twistTap'
@@ -609,12 +621,14 @@ var contentPack = {tap:[]};
 var initPack = {player:[], projectile:[], tap:[], cheese:[], map:{id:currentMap.id, width:currentMap.width, height:currentMap.height, grid:currentMap.grid}};
 var removePack = {player:[], projectile:[], cheese:[]};
 
-createCheese = function() {
+createItems = function() {
   for(var i = 50; i < 100 * 2; i += 80){
     for(var j = 50; j < 100 *2; j += 80) {
       if(!currentMap.isPositionWall(i, j))
         var cheese = Cheese(i + " " + j, i, j);
     }
   }
+  //Tap(1, 1584, 448, "M");
+  //Tap(2, 100, 100, "M");
 }
-createCheese();
+createItems();

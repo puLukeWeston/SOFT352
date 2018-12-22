@@ -1,27 +1,59 @@
-<canvas id="gameboard" width="750" height="500" style="border:1px solid #000000;"></canvas>
+<div id="loginDiv">
+  Username: <input id="loginDivUsername" type="text"></input>
+  Password: <input id="loginDivPassword" type="password"></input>
+  <button id="loginDivLogin">Login In</button>
+  <button id="loginDivSignUp">Sign Up</button>
+</div>
 
-<form id="debug-form">
-  <input id="debug-input" type="text" style="width:750px"></input>
-</form>
+<div id="gameDiv" style="display:none;">
+  <canvas id="gameboard" width="750" height="500" style="border:1px solid #000000;"></canvas>
+</div>
+
+
 
 <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
 
 <script>
+  var socket = io();
 
-  var WIDTH = 750;
-  var HEIGHT = 500;
+  var loginDiv = document.getElementById("loginDiv");
+  var loginDivUsername = document.getElementById("loginDivUsername");
+  var loginDivPassword = document.getElementById("loginDivPassword");
+  var loginDivLogin = document.getElementById("loginDivLogin");
+  var loginDivSignUp = document.getElementById("loginDivSignUp");
 
-  var debugInput = document.getElementById('debug-input');
-  var debugForm = document.getElementById('debug-form');
+  loginDivSignUp.onclick = function() {
+    socket.emit('signUp', {username:loginDivUsername.value, password:loginDivPassword.value});
+  }
+
+  loginDivLogin.onclick = function() {
+    socket.emit('login', {username:loginDivUsername.value, password:loginDivPassword.value});
+  }
+
+  socket.on('loginResponse', function(data) {
+    if(data.success) {
+      loginDiv.style.display = "none";
+      gameDiv.style.display = "inline-block";
+    } else
+      alert("Login was unsuccessful.");
+  });
+
+  socket.on('signUpResponse', function(data) {
+    if(data.success)
+      alert("Sign up was successful.");
+    else
+      alert("Sign up was unsuccessful.");
+  });
+
 
   var canvas = document.getElementById("gameboard");
   var gameboard = canvas.getContext("2d");
   gameboard.font = '20px Arial';
 
-  var Img = {};
-  Img.map = new Image();
-  Img.map.src = '/client/img/Blueprints.png';
+  var WIDTH = 750;
+  var HEIGHT = 500;
 
+  var Img = {};
   Img.cat = new Image();
   Img.cat.src = '/client/img/Cat16.png';
   Img.mouse = new Image();
@@ -29,7 +61,6 @@
   Img.cheese =  new Image();
   Img.cheese.src = '/client/img/Cheese16.png';
 
-  var socket = io();
 
   // ID given to this player on the server-side
   var selfId = null;
@@ -256,25 +287,6 @@
       Projectile.list[i].draw();
 
   }, 40);
-
-  socket.on('evalAnswer', function(data) {
-    console.log(data);
-  });
-
-  debugForm.onsubmit = function(e) {
-    // Don't refresh on submit
-    e.preventDefault();
-    // Send the target value (to be evaluated) to the server
-    socket.emit('evalServer', debugInput.value);
-    debugInput.value = '';
-  }
-
-  var drawMap = function() {
-    var x = WIDTH/2 - Player.list[selfId].x;
-    var y = HEIGHT/2 - Player.list[selfId].y;
-
-    gameboard.drawImage(Img.map,x,y);
-  }
 
   Maps = function(initPack) {
     var self = {
