@@ -5,6 +5,11 @@
   <button id="loginDivSignUp">Sign Up</button>
 </div>
 
+<div id="joinGameDiv" style="display:none;">
+  <p>There are only limited spaces, but try joining!</p>
+  <button id="joinGame">Join Game!</button>
+</div>
+
 <div id="gameDiv" style="display:none;">
   <canvas id="gameboard" width="750" height="500" style="border:1px solid #000000;"></canvas>
 </div>
@@ -21,6 +26,7 @@
   var loginDivPassword = document.getElementById("loginDivPassword");
   var loginDivLogin = document.getElementById("loginDivLogin");
   var loginDivSignUp = document.getElementById("loginDivSignUp");
+  var joinGame = document.getElementById("joinGame");
 
   loginDivSignUp.onclick = function() {
     socket.emit('signUp', {username:loginDivUsername.value, password:loginDivPassword.value});
@@ -30,10 +36,15 @@
     socket.emit('login', {username:loginDivUsername.value, password:loginDivPassword.value});
   }
 
+  joinGame.onclick = function() {
+    socket.emit('joinRoom', {roomname:"default"});
+    console.log("sending joinRoom");
+  }
+
   socket.on('loginResponse', function(data) {
     if(data.success) {
       loginDiv.style.display = "none";
-      gameDiv.style.display = "inline-block";
+      joinGameDiv.style.display = "inline-block";
     } else
       alert("Login was unsuccessful.");
   });
@@ -45,6 +56,14 @@
       alert("Sign up was unsuccessful.");
   });
 
+  socket.on('joinRoomResponse', function(data) {
+    if(data.success) {
+      joinGameDiv.style.display = "none";
+      gameDiv.style.display = "inline-block";
+    } else {
+      alert("Room is full");
+    }
+  });
 
   var canvas = document.getElementById("gameboard");
   var gameboard = canvas.getContext("2d");
@@ -286,7 +305,7 @@
     for(var i in Projectile.list)
       Projectile.list[i].draw();
 
-  }, 40);
+  }, 100);
 
   Maps = function(initPack) {
     var self = {

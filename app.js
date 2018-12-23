@@ -63,32 +63,32 @@ io.sockets.on('connection', function(socket) {
 
   socket.on('login', function(data) {
     isValidPassword(data, function(res) {
-      if(res) {
+      if(res)
         socket.emit('loginResponse', {success:true});
-        var assignment = "M";
-        var clients = "";
-        for(var i in Player.list) {
-          clients += Player.list[i].assignment;
-        }
-
-        // If the String contains both a C and an M, don't assign the client to anything
-        if(clients.indexOf("M") > -1 && clients.indexOf("C") > -1) {
-          console.log("Already have two clients");
-          delete Player.list[socket.id];
-        } else if(clients.indexOf("M") > -1)
-            assignment = "C";
-
-        Player.onConnect(socket, assignment);
-
-      } else
-          socket.emit('loginResponse', {success:false});
+      else
+        socket.emit('loginResponse', {success:false});
     });
   });
 
-  // If the client disconnects
-  socket.on('disconnect',function(){
-    delete SOCKET_LIST[socket.id];
-    Player.onDisconnect(socket);
+  socket.on('joinRoom', function(data) {
+    if(Player.listSize() <= 2) {
+      socket.emit('joinRoomResponse', {success:true});
+      var assignment = "M";
+      var clients = "";
+      for(var i in Player.list) {
+        clients += Player.list[i].assignment;
+      }
+
+      // If the String contains both a C and an M, don't assign the client to anything
+      if(clients.indexOf("M") > -1 && clients.indexOf("C") > -1) {
+        console.log("Already have two clients");
+        //delete Player.list[socket.id];
+      } else if(clients.indexOf("M") > -1)
+          assignment = "C";
+
+      Player.onConnect(socket, assignment);
+    } else
+      socket.emit('joinRoomResponse', {success:false});
   });
 
   //  When a Player clicks on a Tap that belongs to their assignment, it emits a 'twistTap'
@@ -104,6 +104,13 @@ io.sockets.on('connection', function(socket) {
     } else if(data.direction === "off") {
       targetTap.running = false;
     }
+  });
+
+  // If the client disconnects
+  socket.on('disconnect',function(){
+    delete SOCKET_LIST[socket.id];
+    Player.onDisconnect(socket);
+    console.log(socket.id + " is disconnected");
   });
 
 });

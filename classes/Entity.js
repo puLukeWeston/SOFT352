@@ -186,7 +186,7 @@ Player.onConnect = function(socket, assignment) {
   var player = Player(socket.id, assignment);
 
   // Then add a listener for keypresses to update the position
-  socket.on('keyPress', function(data){
+  socket.on('keyPress', function(data) {
     if(data.inputId === 'right')
       player.pressingRight = data.state;
     if(data.inputId === 'left')
@@ -220,6 +220,14 @@ Player.getAllInitPack = function() {
 Player.onDisconnect = function(socket) {
   delete Player.list[socket.id];
 }
+
+Player.listSize = function() {
+    var size = 1;
+    for (var i in Player.list){
+      size++;
+    }
+    return size;
+};
 
 // Get and return the most up to date information about a players status'
 Player.update = function() {
