@@ -187,7 +187,6 @@ Player.onConnect = function(socket, id, assignment) {
 
   // Then add a listener for keypresses to update the position
   socket.on('keyPress', function(data) {
-    console.log(data);
     if(data.inputId === 'right')
       player.pressingRight = data.state;
     if(data.inputId === 'left')
@@ -197,6 +196,16 @@ Player.onConnect = function(socket, id, assignment) {
     if(data.inputId === 'down')
       player.pressingDown = data.state;
   });
+
+  socket.on('initReq', function() {
+    socket.emit('init', {
+      player:Player.getAllInitPack(),
+      projectile:Projectile.getAllInitPack(),
+      tap:Tap.getAllInitPack(),
+      cheese:Cheese.getAllInitPack(),
+      map:{id:currentMap.id, width:currentMap.width, height:currentMap.height, grid:currentMap.grid}
+    });
+  })
 
   // Send the client an initialisation pack of all of the items needed to draw
   socket.emit('init', {
@@ -217,8 +226,8 @@ Player.getAllInitPack = function() {
   return players;
 }
 
-Player.onDisconnect = function(socket) {
-  delete Player.list[socket.id];
+Player.onDisconnect = function(id) {
+  delete Player.list[id];
 }
 
 Player.listSize = function() {

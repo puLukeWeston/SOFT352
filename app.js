@@ -19,15 +19,6 @@ console.log("Server Started.");
 var SOCKET_LIST = {};
 var CONNECTED_PLAYERS = {};
 
-var canGetUserId = function(data, cb) {
-  db.account.find({username:data.username, password:data.password}, function(err, res) {
-    if(res[0])
-      cb(res);
-    else
-      cb(false);
-  });
-}
-
 var isValidPassword = function(data, cb) {
   db.account.find({username:data.username, password:data.password}, function(err, res) {
     if(res[0])
@@ -85,9 +76,9 @@ io.sockets.on('connection', function(socket) {
           CONNECTED_PLAYERS[userDetails.ID] = {socketID:socket.id, userID:userDetails.ID};
         }
         else
-          socket.emit('loginResponse', {success:false});
+          socket.emit('loginResponse', {success:false, reason:"Username/Password combination not recognised"});
       else
-        socket.emit('loginResponse', {success:false});
+        socket.emit('loginResponse', {success:false, reason:"Account already in use"});
     });
   });
 
@@ -107,7 +98,6 @@ io.sockets.on('connection', function(socket) {
         //delete Player.list[socket.id];
       } else if(clients.indexOf("M") > -1)
           assignment = "C";
-
       Player.onConnect(socket, data.id, assignment);
     } else
       socket.emit('joinRoomResponse', {success:false});
@@ -132,10 +122,10 @@ io.sockets.on('connection', function(socket) {
   socket.on('disconnect',function(){
     delete SOCKET_LIST[socket.id];
     for(var i in CONNECTED_PLAYERS)
-      if(CONNECTED_PLAYERS[i].socketID === socket.id)
+      if(CONNECTED_PLAYERS[i].socketID === socket.id){
+        Player.onDisconnect(CONNECTED_PLAYERS[i].userID);
         delete CONNECTED_PLAYERS[i];
-
-    Player.onDisconnect(socket);
+      }
   });
 
 });

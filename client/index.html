@@ -38,7 +38,6 @@
 
   joinGame.onclick = function() {
     socket.emit('joinRoom', {roomname:"default", id:selfId});
-    console.log("sending joinRoom");
   }
 
   socket.on('loginResponse', function(data) {
@@ -59,6 +58,11 @@
 
   socket.on('joinRoomResponse', function(data) {
     if(data.success) {
+      setTimeout(function() {
+        if(!initialised) {
+          socket.emit('initReq');
+        }
+      }, 5000);
       joinGameDiv.style.display = "none";
       gameDiv.style.display = "inline-block";
     } else {
@@ -84,6 +88,7 @@
 
   // ID given to this player on the server-side
   var selfId = null;
+  var initialised = false;
   // Objects on the map that can be interacted with by the user (via mouse-click, rather than just collectables)
   var interactableElements = [];
 
@@ -115,7 +120,6 @@
         gameboard.drawImage(Img.mouse, 0, 0, Img.mouse.width, Img.mouse.height, x - width/2, y - height/2, width, height);
       }
     }
-    console.log("Player selfID = " + self.id);
     Player.list[self.id] = self;
     return self;
   }
@@ -184,6 +188,7 @@
   Cheese.list = {};
 
   socket.on('init', function(data) {
+    initialised = true;
     if(data.selfId)
       selfId = data.selfId;
     for(var i = 0; i < data.player.length; i++)
