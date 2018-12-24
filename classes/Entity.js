@@ -29,7 +29,7 @@ Entity = function() {
   return self;
 }
 
-Entity.getFramUpdateData = function() {
+Entity.getFrameUpdateData = function() {
 
   var pack = {
     initPack:{
@@ -181,12 +181,13 @@ Player = function(id, assignment) {
   return self;
 }
 
-Player.onConnect = function(socket, assignment) {
+Player.onConnect = function(socket, id, assignment) {
   // Create the client a new Player object based on the socket id
-  var player = Player(socket.id, assignment);
+  var player = Player(id, assignment);
 
   // Then add a listener for keypresses to update the position
   socket.on('keyPress', function(data) {
+    console.log(data);
     if(data.inputId === 'right')
       player.pressingRight = data.state;
     if(data.inputId === 'left')
@@ -199,7 +200,6 @@ Player.onConnect = function(socket, assignment) {
 
   // Send the client an initialisation pack of all of the items needed to draw
   socket.emit('init', {
-    selfId:socket.id,
     player:Player.getAllInitPack(),
     projectile:Projectile.getAllInitPack(),
     tap:Tap.getAllInitPack(),

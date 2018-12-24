@@ -17,11 +17,21 @@ serv.listen(2000);
 console.log("Server Started.");
 
 var SOCKET_LIST = {};
+var CONNECTED_PLAYERS = {};
+
+var canGetUserId = function(data, cb) {
+  db.account.find({username:data.username, password:data.password}, function(err, res) {
+    if(res[0])
+      cb(res);
+    else
+      cb(false);
+  });
+}
 
 var isValidPassword = function(data, cb) {
   db.account.find({username:data.username, password:data.password}, function(err, res) {
     if(res[0])
-      cb(true);
+      cb(res[0]);
     else
       cb(false);
   });
@@ -63,14 +73,26 @@ io.sockets.on('connection', function(socket) {
 
   socket.on('login', function(data) {
     isValidPassword(data, function(res) {
-      if(res)
-        socket.emit('loginResponse', {success:true});
+      var userDetails = JSON.parse(JSON.stringify(res));
+      var found = false;
+      for(var i in CONNECTED_PLAYERS)
+        if(CONNECTED_PLAYERS[i].userID === userDetails.ID)
+          found = true;
+
+      if(found === false)
+        if(res) {
+          socket.emit('loginResponse', {success:true, id:userDetails.ID});
+          CONNECTED_PLAYERS[userDetails.ID] = {socketID:socket.id, userID:userDetails.ID};
+        }
+        else
+          socket.emit('loginResponse', {success:false});
       else
         socket.emit('loginResponse', {success:false});
     });
   });
 
   socket.on('joinRoom', function(data) {
+
     if(Player.listSize() <= 2) {
       socket.emit('joinRoomResponse', {success:true});
       var assignment = "M";
@@ -86,7 +108,7 @@ io.sockets.on('connection', function(socket) {
       } else if(clients.indexOf("M") > -1)
           assignment = "C";
 
-      Player.onConnect(socket, assignment);
+      Player.onConnect(socket, data.id, assignment);
     } else
       socket.emit('joinRoomResponse', {success:false});
   });
@@ -109,18 +131,20 @@ io.sockets.on('connection', function(socket) {
   // If the client disconnects
   socket.on('disconnect',function(){
     delete SOCKET_LIST[socket.id];
+    for(var i in CONNECTED_PLAYERS)
+      if(CONNECTED_PLAYERS[i].socketID === socket.id)
+        delete CONNECTED_PLAYERS[i];
+
     Player.onDisconnect(socket);
-    console.log(socket.id + " is disconnected");
   });
 
 });
 
 setInterval(function() {
-  var packs = Entity.getFramUpdateData();
+  var packs = Entity.getFrameUpdateData();
   // Send the updated info back to update the clients screen
   for(var i in SOCKET_LIST) {
     var socket = SOCKET_LIST[i];
-    socket.emit('init', packs.initPack);
     socket.emit('update', packs.updatePack);
     socket.emit('remove', packs.removePack);
   }

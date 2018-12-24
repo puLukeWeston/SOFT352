@@ -37,12 +37,13 @@
   }
 
   joinGame.onclick = function() {
-    socket.emit('joinRoom', {roomname:"default"});
+    socket.emit('joinRoom', {roomname:"default", id:selfId});
     console.log("sending joinRoom");
   }
 
   socket.on('loginResponse', function(data) {
     if(data.success) {
+      selfId = data.id;
       loginDiv.style.display = "none";
       joinGameDiv.style.display = "inline-block";
     } else
@@ -114,7 +115,7 @@
         gameboard.drawImage(Img.mouse, 0, 0, Img.mouse.width, Img.mouse.height, x - width/2, y - height/2, width, height);
       }
     }
-
+    console.log("Player selfID = " + self.id);
     Player.list[self.id] = self;
     return self;
   }
@@ -278,7 +279,7 @@
   });
 
   setInterval(function() {
-    if(!selfId)
+    if(gameDiv.style.display !== "inline-block")
       return;
     // Clear the gameboard
     gameboard.clearRect(0, 0, WIDTH, HEIGHT);
