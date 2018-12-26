@@ -247,14 +247,14 @@
           t.recharging = pack.recharging;
       }
 
-      var x = data.tap[i].x - Player.list[selfId].x + WIDTH/2;
-      var y = data.tap[i].y - Player.list[selfId].y + HEIGHT/2;
+      var x = t.x - Player.list[selfId].x + WIDTH/2 - 5;
+      var y = t.y - Player.list[selfId].y + HEIGHT/2 - 5;
 
       // Add each Tap to the interactableElements array, as there will be onclick events associated with them
       interactableElements.push({
         id: data.tap[i].id,
-        left: x-5,
-        top: y-5,
+        left: x,
+        top: y,
         width: 10,
         height: 10,
         running: data.tap[i].running,

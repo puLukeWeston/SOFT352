@@ -14,7 +14,7 @@ var correctCred2 = {'username':'David','password':'soft352'};
 var correctCred3 = {'username':'AzureDiamond','password':'hunter2'};
 var incorrectCred = {'username':'David','password':'false'};
 
-describe("Server-side App", function() {
+describe("Server-side App Responses", function() {
 
   var player1 = null;
   var player2 = null;
