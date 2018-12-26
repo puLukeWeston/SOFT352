@@ -1,6 +1,6 @@
 var maps = require('./Map.js');
 
-var currentMap = Maps();
+var currentMap = Maps("blueprints");
 var initPack = {player:[], projectile:[], tap:[], cheese:[], map:{id:currentMap.id, width:currentMap.width, height:currentMap.height, grid:currentMap.grid}};
 var removePack = {player:[], projectile:[], cheese:[]};
 
@@ -375,8 +375,6 @@ Tap = function(id, owner, xPos, yPos) {
   self.getUpdatePack = function() {
     return {
       id:self.id,
-      x:self.x,
-      y:self.y,
       running:self.running,
       recharging:self.recharging,
       owner:self.owner
@@ -384,7 +382,7 @@ Tap = function(id, owner, xPos, yPos) {
   }
 
   Tap.list[id] = self;
-  contentPack.tap.push(self.getInitPack());
+  initPack.tap.push(self.getInitPack());
   return self;
 }
 Tap.list = {};
@@ -402,7 +400,6 @@ Tap.update = function() {
   for(var i in Tap.list) {
     var tap = Tap.list[i];
     tap.update();
-
     pack.push(tap.getUpdatePack());
   }
   return pack;

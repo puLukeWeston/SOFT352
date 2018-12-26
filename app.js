@@ -17,7 +17,6 @@ serv.listen(2000);
 console.log("Server Started.");
 
 var SOCKET_LIST = {};
-var CONNECTED_PLAYERS = {};
 
 var isValidPassword = function(data, cb) {
   db.account.find({username:data.username, password:data.password}, function(err, res) {
@@ -48,7 +47,7 @@ var io = require('socket.io')(serv,{});
 io.sockets.on('connection', function(socket) {
   // Give the client an ID (temporary functionality)
   socket.id = Math.random();
-  SOCKET_LIST[socket.id] = socket;
+  SOCKET_LIST[socket.id] = {socket:socket};
 
   socket.on('signUp', function(data) {
     isUsernameTaken(data, function(res) {
@@ -66,14 +65,14 @@ io.sockets.on('connection', function(socket) {
     isValidPassword(data, function(res) {
       var userDetails = JSON.parse(JSON.stringify(res));
       var found = false;
-      for(var i in CONNECTED_PLAYERS)
-        if(CONNECTED_PLAYERS[i].userID === userDetails.ID)
+      for(var i in SOCKET_LIST) {
+        if(SOCKET_LIST[i].userID === userDetails.ID)
           found = true;
 
       if(found === false)
         if(res) {
           socket.emit('loginResponse', {success:true, id:userDetails.ID});
-          CONNECTED_PLAYERS[userDetails.ID] = {socketID:socket.id, userID:userDetails.ID};
+          SOCKET_LIST[socket.id].userID = userDetails.ID;
         }
         else
           socket.emit('loginResponse', {success:false, reason:"Username/Password combination not recognised"});
@@ -86,19 +85,18 @@ io.sockets.on('connection', function(socket) {
 
     if(Player.listSize() <= 2) {
       socket.emit('joinRoomResponse', {success:true});
+      SOCKET_LIST[socket.id].roomName = data.roomname;
+
+      // TODO: Implement functionality to remove this
       var assignment = "M";
       var clients = "";
       for(var i in Player.list) {
         clients += Player.list[i].assignment;
       }
 
-      // If the String contains both a C and an M, don't assign the client to anything
-      if(clients.indexOf("M") > -1 && clients.indexOf("C") > -1) {
-        console.log("Already have two clients");
-        //delete Player.list[socket.id];
-      } else if(clients.indexOf("M") > -1)
+      if(clients.indexOf("M") > -1)
           assignment = "C";
-      Player.onConnect(socket, data.id, assignment);
+      Player.onConnect(socket , data.id, assignment);
     } else
       socket.emit('joinRoomResponse', {success:false});
   });
@@ -111,21 +109,16 @@ io.sockets.on('connection', function(socket) {
         targetTap = Tap.list[i];
     }
     // Turn the Taps running condition to true or false depending on the direction passed
-    if(data.direction === "on") {
+    if(data.direction === "on")
       targetTap.running = true;
-    } else if(data.direction === "off") {
+    else if(data.direction === "off") 
       targetTap.running = false;
-    }
   });
 
   // If the client disconnects
   socket.on('disconnect',function(){
+    Player.onDisconnect(SOCKET_LIST[socket.id].userID);
     delete SOCKET_LIST[socket.id];
-    for(var i in CONNECTED_PLAYERS)
-      if(CONNECTED_PLAYERS[i].socketID === socket.id){
-        Player.onDisconnect(CONNECTED_PLAYERS[i].userID);
-        delete CONNECTED_PLAYERS[i];
-      }
   });
 
 });
@@ -134,13 +127,15 @@ setInterval(function() {
   var packs = Entity.getFrameUpdateData();
   // Send the updated info back to update the clients screen
   for(var i in SOCKET_LIST) {
-    var socket = SOCKET_LIST[i];
-    socket.emit('update', packs.updatePack);
-    socket.emit('remove', packs.removePack);
+    if(SOCKET_LIST[i].roomName === "default") {
+      SOCKET_LIST[i].socket.emit('init', packs.initPack);
+      SOCKET_LIST[i].socket.emit('update', packs.updatePack);
+      SOCKET_LIST[i].socket.emit('remove', packs.removePack);
+    }
   }
 },1000/20);
 
-currentMap = Maps();
+currentMap = Maps("blueprints");
 
 createItems = function() {
   for(var i = 0; i < currentMap.width * 2; i += 80){
@@ -149,7 +144,7 @@ createItems = function() {
         var cheese = Cheese(i + " " + j, i, j);
     }
   }
-  //Tap(1, 1584, 448, "M");
-  //Tap(2, 100, 100, "M");
+  Tap(1, "M", 1584, 448);
+  Tap(2, "M", 100, 100);
 }
 createItems();
