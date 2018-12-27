@@ -148,14 +148,29 @@ setInterval(function() {
   }
 },1000/20);
 
+setInterval(function() {
+  var amount = 200 - Cheese.listSize();
+  if(amount >= 0)
+    for(var i = 0; i < amount; i++) {
+      var x = randomInt(0, currentMap.width * 2);
+      var y = randomInt(0, currentMap.height * 2);
+      if(!currentMap.isPositionWall(x, y))
+        var cheese = Cheese(x + " " + y + ": " + randomInt(0, 10000), x, y);
+    }
+}, 10000);
+
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min+1) + min);
+}
+
 currentMap = Maps("blueprints");
 
 createItems = function() {
-  for(var i = 0; i < currentMap.width * 2; i += 80){
-    for(var j = 50; j < currentMap.height * 2; j += 80) {
-      if(!currentMap.isPositionWall(i, j))
-        var cheese = Cheese(i + " " + j, i, j);
-    }
+  for(var i = 0; i < 250; i++) {
+    var x = randomInt(0, currentMap.width * 2);
+    var y = randomInt(0, currentMap.height * 2);
+    if(!currentMap.isPositionWall(x, y))
+      var cheese = Cheese(x + " " + y + ": " + randomInt(0, 10000), x, y);
   }
   Tap(1, "M", 1584, 448);
   Tap(2, "M", 100, 100);

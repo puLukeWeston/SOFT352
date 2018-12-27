@@ -418,7 +418,7 @@ Cheese = function(id, x, y) {
     for(i in Player.list) {
       var p = Player.list[i];
       // If the cheese is in contact with a Mouse
-      if(self.getDistance(p) < 16 && p.assignment === "M") {
+      if(self.getDistance(p) < TILE_SIZE/2 && p.assignment === "M") {
         // Inrease the players score by 1
         p.score++;
         // Remove the cheese
@@ -478,3 +478,11 @@ Cheese.update = function() {
   }
   return pack;
 }
+
+Cheese.listSize = function() {
+    var size = 0;
+    for (var i in Cheese.list){
+      size++;
+    }
+    return size;
+};
