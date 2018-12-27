@@ -64,39 +64,52 @@ io.sockets.on('connection', function(socket) {
   socket.on('login', function(data) {
     isValidPassword(data, function(res) {
       var userDetails = JSON.parse(JSON.stringify(res));
+
+      if(!res) {
+        socket.emit('loginResponse', {success:false, reason:"Username/Password combination not recognised"});
+        return;
+      }
+
       var found = false;
       for(var i in SOCKET_LIST) {
         if(SOCKET_LIST[i].userID === userDetails.ID)
           found = true;
+      }
 
-      if(found === false)
-        if(res) {
+      if(!found) {
           socket.emit('loginResponse', {success:true, id:userDetails.ID});
           SOCKET_LIST[socket.id].userID = userDetails.ID;
-        }
-        else
-          socket.emit('loginResponse', {success:false, reason:"Username/Password combination not recognised"});
-      else
+      } else
         socket.emit('loginResponse', {success:false, reason:"Account already in use"});
     });
   });
 
   socket.on('joinRoom', function(data) {
+    var roomCount = 0;
+    for(var i in SOCKET_LIST) {
+      if(SOCKET_LIST[i].roomName == data.roomname)
+        roomCount++;
+    }
 
-    if(Player.listSize() <= 2) {
-      socket.emit('joinRoomResponse', {success:true});
-      SOCKET_LIST[socket.id].roomName = data.roomname;
+    if(roomCount < 6) {
 
-      // TODO: Implement functionality to remove this
-      var assignment = "M";
-      var clients = "";
-      for(var i in Player.list) {
-        clients += Player.list[i].assignment;
+      var typeCount = 0;
+      for(var i in SOCKET_LIST)
+        if(SOCKET_LIST[i].roomName === data.roomname)
+          if(SOCKET_LIST[i].choice === data.choice)
+            typeCount++;
+
+      if(data.choice === "C" && typeCount !== 0)
+        socket.emit('joinRoomResponse', {success:false, reason:"There is already a cat in that room!"});
+      else if(data.choice === "M" && typeCount >= 5)
+        socket.emit('joinRoomResponse', {success:false, reason:"There are too many mice in there already!"});
+      else {
+        SOCKET_LIST[socket.id].roomName = data.roomname;
+        SOCKET_LIST[socket.id].choice = data.choice;
+        socket.emit('joinRoomResponse', {success:true});
+        Player.onConnect(socket, data.id, data.choice);
       }
 
-      if(clients.indexOf("M") > -1)
-          assignment = "C";
-      Player.onConnect(socket , data.id, assignment);
     } else
       socket.emit('joinRoomResponse', {success:false});
   });
@@ -127,7 +140,7 @@ setInterval(function() {
   var packs = Entity.getFrameUpdateData();
   // Send the updated info back to update the clients screen
   for(var i in SOCKET_LIST) {
-    if(SOCKET_LIST[i].roomName === "default") {
+    if(SOCKET_LIST[i].roomName === "room1") {
       SOCKET_LIST[i].socket.emit('init', packs.initPack);
       SOCKET_LIST[i].socket.emit('update', packs.updatePack);
       SOCKET_LIST[i].socket.emit('remove', packs.removePack);

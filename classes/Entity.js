@@ -64,7 +64,7 @@ Entity.getFrameUpdateData = function() {
 }
 
 // Create a new Player object
-Player = function(id, assignment) {
+Player = function(socket, id, assignment) {
   var self = Entity();
   // Overwrite the default entity attributes
   if(assignment === "C") {
@@ -74,6 +74,7 @@ Player = function(id, assignment) {
     self.x = 1125;
     self.y = 965;
   }
+  self.socket = socket;
   self.id = id;
   // Add Player specific defaults
   self.assignment = assignment;
@@ -100,23 +101,21 @@ Player = function(id, assignment) {
       // If the Cat touches the Mouse
       if(p.assignment === "M") {
         if(self.getDistance(p) < TILE_SIZE / 2 && self.assignment === "C" && !self.cooldown) {
-          console.log("The cooldown = " + self.cooldown);
           p.lives--;
           if(p.lives == 0) {
-            console.log("Mouse has been caught! Their score was: " + p.score);
+            self.score++;
+            p.socket.emit('died', {score:p.score})
+            removePack.player.push({id:p.id, score:p.score});
+            delete Player.list[i];
           } else {
-            console.log("Touch!");
             self.x = 480;
             self.y = 580;
             self.cooldown = true;
             setTimeout(function() {
               self.cooldown = false;
-              console.log("Cooldown over! Get catching");
             }, 5000);
 
           }
-          // Life system? Cat touches mouse three times & wins?
-          // Cooldown on touches
         }
       }
     }
@@ -183,7 +182,7 @@ Player = function(id, assignment) {
 
 Player.onConnect = function(socket, id, assignment) {
   // Create the client a new Player object based on the socket id
-  var player = Player(id, assignment);
+  var player = Player(socket, id, assignment);
 
   // Then add a listener for keypresses to update the position
   socket.on('keyPress', function(data) {
@@ -228,6 +227,8 @@ Player.getAllInitPack = function() {
 
 Player.onDisconnect = function(id) {
   delete Player.list[id];
+  removePack.player.push({id:id});
+
 }
 
 Player.listSize = function() {

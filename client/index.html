@@ -3,11 +3,15 @@
   Password: <input id="loginDivPassword" type="password"></input>
   <button id="loginDivLogin">Login In</button>
   <button id="loginDivSignUp">Sign Up</button>
+  <p id=signInInfo></p>
 </div>
 
 <div id="joinGameDiv" style="display:none;">
   <p>There are only limited spaces, but try joining!</p>
-  <button id="joinGame">Join Game!</button>
+  <p style="font-weight:bold;">Room One:</p>
+  <button id="joinRoomOneAsCat">Join as Cat!</button>
+  <button id="joinRoomOneAsMouse">Join as Mouse!</button>
+  <p id="lobbyInfo"></p>
 </div>
 
 <div id="gameDiv" style="display:none;">
@@ -22,11 +26,14 @@
   var socket = io();
 
   var loginDiv = document.getElementById("loginDiv");
+  var signInInfo = document.getElementById("signInInfo");
   var loginDivUsername = document.getElementById("loginDivUsername");
   var loginDivPassword = document.getElementById("loginDivPassword");
   var loginDivLogin = document.getElementById("loginDivLogin");
   var loginDivSignUp = document.getElementById("loginDivSignUp");
-  var joinGame = document.getElementById("joinGame");
+  var joinRoomOneAsCat = document.getElementById("joinRoomOneAsCat");
+  var joinRoomOneAsMouse = document.getElementById("joinRoomOneAsMouse");
+  var lobbyInfo = document.getElementById("lobbyInfo");
 
   loginDivSignUp.onclick = function() {
     socket.emit('signUp', {username:loginDivUsername.value, password:loginDivPassword.value});
@@ -36,8 +43,12 @@
     socket.emit('login', {username:loginDivUsername.value, password:loginDivPassword.value});
   }
 
-  joinGame.onclick = function() {
-    socket.emit('joinRoom', {roomname:"default", id:selfId});
+  joinRoomOneAsCat.onclick = function() {
+    socket.emit('joinRoom', {roomname:"room1", id:selfId, choice:"C"});
+  }
+
+  joinRoomOneAsMouse.onclick = function() {
+    socket.emit('joinRoom', {roomname:"room1", id:selfId, choice:"M"});
   }
 
   socket.on('loginResponse', function(data) {
@@ -46,14 +57,14 @@
       loginDiv.style.display = "none";
       joinGameDiv.style.display = "inline-block";
     } else
-      alert("Login was unsuccessful.");
+      signInInfo.innerHTML = data.reason;
   });
 
   socket.on('signUpResponse', function(data) {
     if(data.success)
-      alert("Sign up was successful.");
+      signInInfo.innerHTML = "Sign up was successful.";
     else
-      alert("Sign up was unsuccessful.");
+      signInInfo.innerHTML = "Sign up was unsuccessful.";
   });
 
   socket.on('joinRoomResponse', function(data) {
@@ -66,8 +77,14 @@
       joinGameDiv.style.display = "none";
       gameDiv.style.display = "inline-block";
     } else {
-      alert("Room is full");
+      lobbyInfo.innerHTML = data.reason;
     }
+  });
+
+  socket.on('died', function(data) {
+    gameDiv.style.display = "none";
+    joinGameDiv.style.display = "inline-block";
+    lobbyInfo.innerHTML = "You died! Your score was: " + data.score;
   });
 
   var canvas = document.getElementById("gameboard");
@@ -274,7 +291,7 @@
 
   socket.on('remove', function(data) {
     for(var i = 0; i < data.player.length; i++)
-      delete Player.list[data.player[i]];
+      delete Player.list[data.player[i].id];
 
     for(var i = 0; i < data.projectile.length; i++)
       delete Projectile.list[data.projectile[i]];
@@ -311,7 +328,7 @@
     for(var i in Projectile.list)
       Projectile.list[i].draw();
 
-  }, 100);
+  }, 150);
 
   Maps = function(initPack) {
     var self = {
