@@ -8,19 +8,20 @@
 
 <div id="joinGameDiv" style="display:none;">
   <p>There are only limited spaces, but try joining!</p>
-  <p style="font-weight:bold;">Room One:</p>
-  <button id="joinRoomOneAsCat">Join as Cat!</button>
-  <button id="joinRoomOneAsMouse">Join as Mouse!</button>
-  <p id="lobbyInfo"></p>
+  <p style="font-weight:bold;">Room1:</p>
+  <button id="joinRoom1AsCat">Join as Cat!</button>
+  <button id="joinRoom1AsMouse">Join as Mouse!</button>
+  <p id=roomRoom1GameInfo></p>
+  <p id="endGameInfo"></p>
 </div>
 
 <div id="gameDiv" style="display:none;">
   <canvas id="gameboard" width="750" height="500" style="border:1px solid #000000;"></canvas>
 </div>
 
-
-
 <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+<script src="https://app.launchdarkly.com/snippet/ldclient.min.js"></script>
+
 
 <script>
   var socket = io();
@@ -31,9 +32,34 @@
   var loginDivPassword = document.getElementById("loginDivPassword");
   var loginDivLogin = document.getElementById("loginDivLogin");
   var loginDivSignUp = document.getElementById("loginDivSignUp");
-  var joinRoomOneAsCat = document.getElementById("joinRoomOneAsCat");
-  var joinRoomOneAsMouse = document.getElementById("joinRoomOneAsMouse");
-  var lobbyInfo = document.getElementById("lobbyInfo");
+  var joinRoom1AsCat = document.getElementById("joinRoom1AsCat");
+  var joinRoom1AsMouse = document.getElementById("joinRoom1AsMouse");
+  var roomRoom1GameInfo = document.getElementById("roomRoom1GameInfo");
+  var endGameInfo = document.getElementById("endGameInfo");
+
+  var canvas = document.getElementById("gameboard");
+  var gameboard = canvas.getContext("2d");
+  gameboard.font = '20px Arial';
+
+  var user = {
+    firstName: 'Luke',
+    lastName: 'Weston',
+    key: 'luke@example.com',
+    custom: {
+      groups: 'beta_testers'
+    }
+  };
+  var ldclient = LDClient.initialize('5c2524ff53f8631ecef47a1b', user);
+  var shouldShowKillFeed = false;
+  var shouldShowLobbyInfo = false;
+
+  function render() {
+    shouldShowKillFeed = ldclient.variation('kill-feed', false);
+    shouldShowLobbyInfo = ldclient.variation('lobby-info', false);
+  }
+
+  ldclient.on('ready', render);
+  ldclient.on('change', render);
 
   loginDivSignUp.onclick = function() {
     socket.emit('signUp', {username:loginDivUsername.value, password:loginDivPassword.value});
@@ -43,12 +69,12 @@
     socket.emit('login', {username:loginDivUsername.value, password:loginDivPassword.value});
   }
 
-  joinRoomOneAsCat.onclick = function() {
-    socket.emit('joinRoom', {roomname:"room1", id:selfId, choice:"C"});
+  joinRoom1AsCat.onclick = function() {
+    socket.emit('joinRoom', {roomname:"Room1", id:selfId, choice:"C"});
   }
 
-  joinRoomOneAsMouse.onclick = function() {
-    socket.emit('joinRoom', {roomname:"room1", id:selfId, choice:"M"});
+  joinRoom1AsMouse.onclick = function() {
+    socket.emit('joinRoom', {roomname:"Room1", id:selfId, choice:"M"});
   }
 
   socket.on('loginResponse', function(data) {
@@ -69,27 +95,23 @@
 
   socket.on('joinRoomResponse', function(data) {
     if(data.success) {
-      setTimeout(function() {
-        if(!initialised) {
-          socket.emit('initReq');
-        }
-      }, 5000);
       joinGameDiv.style.display = "none";
       gameDiv.style.display = "inline-block";
     } else {
-      lobbyInfo.innerHTML = data.reason;
+      endGameInfo.innerHTML = data.reason;
     }
+  });
+
+  socket.on('lobbyInfo', function(data) {
+    if(shouldShowLobbyInfo)
+      roomRoom1GameInfo.innerHTML = "Cats: " + data.Room1.cats + ", Mice: " + data.Room1.mice;
   });
 
   socket.on('died', function(data) {
     gameDiv.style.display = "none";
     joinGameDiv.style.display = "inline-block";
-    lobbyInfo.innerHTML = "You died! Your score was: " + data.score;
+    endGameInfo.innerHTML = "You died! Your score was: " + data.score;
   });
-
-  var canvas = document.getElementById("gameboard");
-  var gameboard = canvas.getContext("2d");
-  gameboard.font = '20px Arial';
 
   var WIDTH = 750;
   var HEIGHT = 500;
@@ -195,19 +217,12 @@
       gameboard.drawImage(Img.cheese, 0, 0, Img.cheese.width, Img.cheese.height, x - width/2, y - height/2, width, height);
     }
 
-    self.consume = function() {
-
-    }
-
     Cheese.list[self.id] = self;
     return self;
   }
   Cheese.list = {};
 
   socket.on('init', function(data) {
-    initialised = true;
-    if(data.selfId)
-      selfId = data.selfId;
     for(var i = 0; i < data.player.length; i++)
       new Player(data.player[i]);
 

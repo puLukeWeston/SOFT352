@@ -23,7 +23,7 @@ describe("Server-side App Responses", function() {
     player1 = io.connect(socketURL, options);
     player1.on('connect', function(data) {
       player1.emit('login', correctCred);
-      player1.emit('joinRoom', {roomname:"default", id:1});
+      player1.emit('joinRoom', {roomname:"Room1", id:1, choice:"M"});
       done();
     });
 
@@ -33,7 +33,7 @@ describe("Server-side App Responses", function() {
     player2 = io.connect(socketURL, options);
     player2.on('connect', function(data) {
       player2.emit('login', correctCred2);
-      player2.emit('joinRoom', {roomname:"default", id:2});
+      player2.emit('joinRoom', {roomname:"Room1", id:2, choice:"C"});
       done();
     });
   });
@@ -55,7 +55,6 @@ describe("Server-side App Responses", function() {
     var player0 = io.connect(socketURL, options);
     player0.on('connect', function(data) {
       player0.emit('login', correctCred3);
-      player0.emit('joinRoom', {roomname:"default", id:1});
     });
     player0.on('loginResponse', function(res) {
       console.log(res);
@@ -69,7 +68,6 @@ describe("Server-side App Responses", function() {
     var player3 = io.connect(socketURL, options);
     player3.on('connect', function(data) {
       player3.emit('login', correctCred);
-      player3.emit('joinRoom', {roomname:"default", id:1});
     });
     player3.on('loginResponse', function(res) {
       console.log(res);
@@ -83,7 +81,6 @@ describe("Server-side App Responses", function() {
     var player4 = io.connect(socketURL, options);
     player4.on('connect', function(data) {
       player4.emit('login', incorrectCred);
-      player4.emit('joinRoom', {roomname:"default", id:1});
     });
     player4.on('loginResponse', function(res) {
       console.log(res);
@@ -93,11 +90,26 @@ describe("Server-side App Responses", function() {
     });
   });
 
-  it('Should deny access to a room which already has two players', function(done) {
+  it('Should receive lobby information after logging in', function(done) {
+    var player0 = io.connect(socketURL, options);
+    player0.on('connect', function(data) {
+      player0.emit('login', correctCred3);
+    });
+    player0.on('lobbyInfo', function(res) {
+      console.log(res);
+      res.Room1.total.should.be.exactly(2).and.be.Number();
+      res.Room1.cats.should.be.exactly(1).and.be.Number();
+      res.Room1.mice.should.be.exactly(1).and.be.Number();
+      player0.disconnect();
+      done();
+    });
+  });
+
+  it('Should deny access to a room which already has a cat', function(done) {
     var player5 = io.connect(socketURL, options);
     player5.on('connect', function(data) {
       player5.emit('login', correctCred3);
-      player5.emit('joinRoom', {roomname:"default", id:3});
+      player5.emit('joinRoom', {roomname:"Room1", id:3, choice:"C"});
     });
     player5.on('joinRoomResponse', function(res) {
       console.log(res);
@@ -108,13 +120,11 @@ describe("Server-side App Responses", function() {
   });
 
   it('Should create a Mouse at 1125x965 with default variables', function(done) {
-    player1.emit('initReq');
     player1.on('init', function(initPack) {
       for(var i = 0; i < initPack.player.length; i++){
         if(initPack.player[i].assignment === "M"){
           initPack.player[i].x.should.equal(1125);
           initPack.player[i].y.should.equal(965);
-          initPack.player[i].assignment.should.equal("M");
           initPack.player[i].spd.should.equal(16);
           initPack.player[i].maxSpd.should.equal(16);
           initPack.player[i].score.should.equal(0);
@@ -125,13 +135,11 @@ describe("Server-side App Responses", function() {
   });
 
   it('Should create a Cat at 480x580 with default variables', function(done) {
-    player2.emit('initReq');
     player2.on('init', function(initPack) {
       for(var i = 0; i < initPack.player.length; i++){
         if(initPack.player[i].assignment === "C"){
           initPack.player[i].x.should.equal(480);
           initPack.player[i].y.should.equal(580);
-          initPack.player[i].assignment.should.equal("C");
           initPack.player[i].spd.should.equal(16);
           initPack.player[i].maxSpd.should.equal(16);
           initPack.player[i].score.should.equal(0);
