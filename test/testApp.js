@@ -23,8 +23,11 @@ describe("Server-side App Responses", function() {
     player1 = io.connect(socketURL, options);
     player1.on('connect', function(data) {
       player1.emit('login', correctCred);
-      player1.emit('joinRoom', {roomname:"Room1", id:1, choice:"M"});
-      done();
+      player1.on('loginResponse', function(res) {
+        console.log("Sending join");
+        player1.emit('joinRoom', {roomname:"Room1", choice:"M"});
+        done();
+      });
     });
 
   });
@@ -33,8 +36,10 @@ describe("Server-side App Responses", function() {
     player2 = io.connect(socketURL, options);
     player2.on('connect', function(data) {
       player2.emit('login', correctCred2);
-      player2.emit('joinRoom', {roomname:"Room1", id:2, choice:"C"});
-      done();
+      player2.on('loginResponse', function(res) {
+        player2.emit('joinRoom', {roomname:"Room1", choice:"C"});
+        done();
+      });
     });
   });
 
@@ -105,11 +110,25 @@ describe("Server-side App Responses", function() {
     });
   });
 
+  it('Should receive updated lobby information after leaving a room', function(done) {
+    setTimeout(function() {
+      player1.emit('leaveRoom');
+      player1.on('lobbyInfo', function(res) {
+        console.log(res);
+        res.Room1.total.should.be.exactly(1).and.be.Number();
+        res.Room1.cats.should.be.exactly(1).and.be.Number();
+        res.Room1.mice.should.be.exactly(0).and.be.Number();
+        done();
+      });
+
+    }, 200);
+  });
+
   it('Should deny access to a room which already has a cat', function(done) {
     var player5 = io.connect(socketURL, options);
     player5.on('connect', function(data) {
       player5.emit('login', correctCred3);
-      player5.emit('joinRoom', {roomname:"Room1", id:3, choice:"C"});
+      player5.emit('joinRoom', {roomname:"Room1", choice:"C"});
     });
     player5.on('joinRoomResponse', function(res) {
       console.log(res);

@@ -17,6 +17,7 @@
 
 <div id="gameDiv" style="display:none;">
   <canvas id="gameboard" width="750" height="500" style="border:1px solid #000000;"></canvas>
+  <button id="leaveGame">Leave Game</button>
 </div>
 
 <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
@@ -40,6 +41,7 @@
   var canvas = document.getElementById("gameboard");
   var gameboard = canvas.getContext("2d");
   gameboard.font = '20px Arial';
+  var leaveGame = document.getElementById("leaveGame");
 
   var user = {
     firstName: 'Luke',
@@ -70,11 +72,17 @@
   }
 
   joinRoom1AsCat.onclick = function() {
-    socket.emit('joinRoom', {roomname:"Room1", id:selfId, choice:"C"});
+    socket.emit('joinRoom', {roomname:"Room1", choice:"C"});
   }
 
   joinRoom1AsMouse.onclick = function() {
-    socket.emit('joinRoom', {roomname:"Room1", id:selfId, choice:"M"});
+    socket.emit('joinRoom', {roomname:"Room1", choice:"M"});
+  }
+
+  leaveGame.onclick = function() {
+    socket.emit('leaveRoom');
+    gameDiv.style.display = "none";
+    joinGameDiv.style.display = "inline-block";
   }
 
   socket.on('loginResponse', function(data) {
