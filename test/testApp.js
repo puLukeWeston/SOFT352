@@ -148,6 +148,7 @@ describe("Server-side App Responses", function() {
           initPack.player[i].maxSpd.should.equal(16);
           initPack.player[i].score.should.equal(0);
           done();
+          break;
         }
       }
     });
@@ -174,7 +175,7 @@ describe("Server-side App Responses", function() {
       player1.emit('keyPress', {inputId:'up',state:true});
       player1.on('update', function(updatePack) {
         for(var i = 0; i < updatePack.player.length; i++){
-          if(updatePack.player[i].assignment === "M"){
+          if(updatePack.player[i].id === correctCred.username){
             updatePack.player[i].x.should.equal(1125);
             assert.isBelow(updatePack.player[i].y, 965);
             done();
@@ -187,7 +188,7 @@ describe("Server-side App Responses", function() {
       player1.emit('keyPress', {inputId:'down',state:true});
       player1.on('update', function(updatePack) {
         for(var i = 0; i < updatePack.player.length; i++){
-          if(updatePack.player[i].assignment === "M"){
+          if(updatePack.player[i].id === correctCred.username){
             updatePack.player[i].x.should.equal(1125);
             assert.isAbove(updatePack.player[i].y, 965);
             done();
@@ -200,7 +201,7 @@ describe("Server-side App Responses", function() {
       player1.emit('keyPress', {inputId:'left',state:true});
       player1.on('update', function(updatePack) {
         for(var i = 0; i < updatePack.player.length; i++){
-          if(updatePack.player[i].assignment === "M"){
+          if(updatePack.player[i].id === correctCred.username){
             assert.isBelow(updatePack.player[i].x, 1125);
             updatePack.player[i].y.should.equal(965);
             done();
@@ -213,7 +214,7 @@ describe("Server-side App Responses", function() {
       player1.emit('keyPress', {inputId:'right',state:true});
       player1.on('update', function(updatePack) {
         for(var i = 0; i < updatePack.player.length; i++){
-          if(updatePack.player[i].assignment === "M") {
+          if(updatePack.player[i].id === correctCred.username){
             assert.isAbove(updatePack.player[i].x, 1125);
             updatePack.player[i].y.should.equal(965);
             done();
@@ -226,7 +227,7 @@ describe("Server-side App Responses", function() {
       player2.emit('keyPress', {inputId:'up',state:true});
       player2.on('update', function(updatePack) {
         for(var i = 0; i < updatePack.player.length; i++){
-          if(updatePack.player[i].assignment === "C"){
+          if(updatePack.player[i].id === correctCred2.username){
             updatePack.player[i].x.should.equal(480);
             assert.isBelow(updatePack.player[i].y, 580);
             done();
@@ -239,7 +240,7 @@ describe("Server-side App Responses", function() {
       player2.emit('keyPress', {inputId:'down',state:true});
       player2.on('update', function(updatePack) {
         for(var i = 0; i < updatePack.player.length; i++){
-          if(updatePack.player[i].assignment === "C"){
+          if(updatePack.player[i].id === correctCred2.username){
             updatePack.player[i].x.should.equal(480);
             assert.isAbove(updatePack.player[i].y, 580);
             done();
@@ -252,7 +253,7 @@ describe("Server-side App Responses", function() {
       player2.emit('keyPress', {inputId:'left',state:true});
       player2.on('update', function(updatePack) {
         for(var i = 0; i < updatePack.player.length; i++){
-          if(updatePack.player[i].assignment === "C"){
+          if(updatePack.player[i].id === correctCred2.username){
             assert.isBelow(updatePack.player[i].x, 480);
             updatePack.player[i].y.should.equal(580);
             done();
@@ -265,7 +266,7 @@ describe("Server-side App Responses", function() {
       player2.emit('keyPress', {inputId:'right',state:true});
       player2.on('update', function(updatePack) {
         for(var i = 0; i < updatePack.player.length; i++){
-          if(updatePack.player[i].assignment === "C") {
+          if(updatePack.player[i].id === correctCred2.username){
             assert.isAbove(updatePack.player[i].x, 480);
             updatePack.player[i].y.should.equal(580);
             done();

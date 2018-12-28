@@ -196,16 +196,6 @@ Player.onConnect = function(socket, id, assignment) {
       player.pressingDown = data.state;
   });
 
-  socket.on('initReq', function() {
-    socket.emit('init', {
-      player:Player.getAllInitPack(),
-      projectile:Projectile.getAllInitPack(),
-      tap:Tap.getAllInitPack(),
-      cheese:Cheese.getAllInitPack(),
-      map:{id:currentMap.id, width:currentMap.width, height:currentMap.height, grid:currentMap.grid}
-    });
-  })
-
   // Send the client an initialisation pack of all of the items needed to draw
   socket.emit('init', {
     player:Player.getAllInitPack(),
