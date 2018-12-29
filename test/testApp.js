@@ -24,7 +24,6 @@ describe("Server-side App Responses", function() {
     player1.on('connect', function(data) {
       player1.emit('login', correctCred);
       player1.on('loginResponse', function(res) {
-        console.log("Sending join");
         player1.emit('joinRoom', {roomname:"Room1", choice:"M"});
         done();
       });
@@ -160,8 +159,8 @@ describe("Server-side App Responses", function() {
         if(initPack.player[i].assignment === "C"){
           initPack.player[i].x.should.equal(480);
           initPack.player[i].y.should.equal(580);
-          initPack.player[i].spd.should.equal(16);
-          initPack.player[i].maxSpd.should.equal(16);
+          initPack.player[i].spd.should.equal(15);
+          initPack.player[i].maxSpd.should.equal(20);
           initPack.player[i].score.should.equal(0);
           done();
         }
@@ -269,6 +268,18 @@ describe("Server-side App Responses", function() {
           if(updatePack.player[i].id === correctCred2.username){
             assert.isAbove(updatePack.player[i].x, 480);
             updatePack.player[i].y.should.equal(580);
+            done();
+          }
+        }
+      });
+    });
+
+    it('Should accept Spacebar press from player 2 to increase the speed of the Cat', function(done) {
+      player2.emit('keyPress', {inputId:'space',state:true});
+      player2.on('update', function(updatePack) {
+        for(var i = 0; i < updatePack.player.length; i++){
+          if(updatePack.player[i].id === correctCred2.username){
+            updatePack.player[i].spd.should.equal(20);
             done();
           }
         }

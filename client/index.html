@@ -54,10 +54,12 @@
   var ldclient = LDClient.initialize('5c2524ff53f8631ecef47a1b', user);
   var shouldShowKillFeed = false;
   var shouldShowLobbyInfo = false;
+  var shouldAllowCatToBoost = false;
 
   function render() {
     shouldShowKillFeed = ldclient.variation('kill-feed', false);
     shouldShowLobbyInfo = ldclient.variation('lobby-info', false);
+    shouldAllowCatToBoost = ldclient.variation('cat-space-bar-action', false);
   }
 
   ldclient.on('ready', render);
@@ -135,7 +137,7 @@
 
   // ID given to this player on the server-side
   var selfId = null;
-  var initialised = false;
+  var spaceCooldown = false;
   // Objects on the map that can be interacted with by the user (via mouse-click, rather than just collectables)
   var interactableElements = [];
 
@@ -396,6 +398,17 @@
       socket.emit('keyPress',{inputId:'down',state:true});
     if(event.keyCode === 68) //d
       socket.emit('keyPress',{inputId:'right',state:true});
+    if(shouldAllowCatToBoost) {
+      if(event.keyCode === 32) //space
+        if(!spaceCooldown) {
+          spaceCooldown = true;
+          socket.emit('keyPress',{inputId:'space',state:true});
+          setTimeout(function() {
+            spaceCooldown = false;
+          }, 10000);
+        } else
+          console.log("You can't do that again yet")
+    }
   }
 
   // Listen for the WASD keyup & report changes
@@ -408,6 +421,9 @@
       socket.emit('keyPress',{inputId:'down', state:false});
     if(event.keyCode === 68) //d
       socket.emit('keyPress',{inputId:'right', state:false});
+    if(shouldAllowCatToBoost)
+      if(event.keyCode === 32)  //space
+        socket.emit('keyPress',{inputId:'space',state:false});
   }
 
   // When the mouse is clicked over the canvas
