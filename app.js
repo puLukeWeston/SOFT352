@@ -187,6 +187,17 @@ createItems();
 
 setInterval(function() {
   var packs = Entity.getFrameUpdateData();
+  if(packs.removePack.player.length > 0) {
+    for(var p in packs.removePack.player) {
+      for(var i in SOCKET_LIST) {
+        if(SOCKET_LIST[i].username !== undefined && SOCKET_LIST[i].username === packs.removePack.player[p].id) {
+          SOCKET_LIST[i].roomname = "";
+          SOCKET_LIST[i].choice = "";
+        }
+      }
+    }
+    informLobby();
+  }
   // Send the updated info back to update the clients screen
   for(var i in SOCKET_LIST) {
     if(SOCKET_LIST[i].roomname === "Room1") {
