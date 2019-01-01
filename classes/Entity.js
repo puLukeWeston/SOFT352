@@ -70,9 +70,13 @@ Player = function(socket, id, assignment) {
   if(assignment === "C") {
     self.x = 480;
     self.y = 580;
+    self.baseSpd = 15;
+    self.maxSpd = 20;
   } else if(assignment === "M") {
     self.x = 1125;
     self.y = 965;
+    self.baseSpd = 16;
+    self.maxSpd = 16;
   }
   self.socket = socket;
   self.id = id;
@@ -82,11 +86,11 @@ Player = function(socket, id, assignment) {
   self.pressingLeft = false;
   self.pressingUp = false;
   self.pressingDown = false;
-  self.spd = 16;
-  self.maxSpd = 16;
+  self.pressingSpace = false;
+  self.currSpd = self.baseSpd;
   self.score = 0;
   self.lives = 3;
-  self.cooldown = false;
+  self.cooldownCatch = false;
 
   // Overwrite the super update function
   var superUpdate = self.update;
@@ -100,7 +104,7 @@ Player = function(socket, id, assignment) {
       var p = Player.list[i];
       // If the Cat touches the Mouse
       if(p.assignment === "M") {
-        if(self.getDistance(p) < TILE_SIZE / 2 && self.assignment === "C" && !self.cooldown) {
+        if(self.getDistance(p) < TILE_SIZE / 2 && self.assignment === "C" && !self.cooldownCatch) {
           p.lives--;
           if(p.lives == 0) {
             self.score++;
@@ -110,9 +114,9 @@ Player = function(socket, id, assignment) {
           } else {
             self.x = 480;
             self.y = 580;
-            self.cooldown = true;
+            self.cooldownCatch = true;
             setTimeout(function() {
-              self.cooldown = false;
+              self.cooldownCatch = false;
             }, 5000);
 
           }
@@ -123,27 +127,41 @@ Player = function(socket, id, assignment) {
 
   // Used to move the players character based on recieved key press info
   self.updateSpd = function() {
+
+    if(self.pressingSpace){
+      if(self.assignment === "C") {
+        if(!self.cooldownBoost){
+          cooldownBoost = true;
+          self.currSpd = self.currSpd + (self.maxSpd - self.baseSpd);
+          setTimeout(function() {
+            self.currSpd = self.baseSpd;
+          }, 1500);
+        }
+      }
+    }
+
     // X Axis
     if(self.pressingRight)
-      self.spdX = self.spd;
+      self.spdX = self.currSpd;
      else if(self.pressingLeft)
-      self.spdX =- self.spd;
+      self.spdX =- self.currSpd;
      else
       self.spdX = 0;
 
     // Y Axis
     if(self.pressingUp)
-      self.spdY =- self.spd;
+      self.spdY =- self.currSpd;
      else if(self.pressingDown)
-      self.spdY = self.spd;
+      self.spdY = self.currSpd;
      else
       self.spdY = 0;
 
+
     // Reverts the effects of being slowed down after 7.5 seconds
-    if(self.spd < self.maxSpd) {
+    if(self.currSpd < self.baseSpd) {
       setTimeout(function() {
-        if(self.spd + 0.5 <= self.maxSpd)
-          self.spd += 0.5;
+        if(self.currSpd + 0.5 <= self.baseSpd)
+          self.currSpd += 0.5;
       }, 7500);
       }
     }
@@ -155,7 +173,7 @@ Player = function(socket, id, assignment) {
         x:self.x,
         y:self.y,
         assignment:self.assignment,
-        spd:self.spd,
+        spd:self.currSpd,
         maxSpd:self.maxSpd,
         score:self.score
       };
@@ -168,7 +186,7 @@ Player = function(socket, id, assignment) {
         x:self.x,
         y:self.y,
         assignment:self.assignment,
-        spd:self.spd,
+        spd:self.currSpd,
         score:self.score
       };
     }
@@ -194,6 +212,8 @@ Player.onConnect = function(socket, id, assignment) {
       player.pressingUp = data.state;
     if(data.inputId === 'down')
       player.pressingDown = data.state;
+    if(data.inputId === 'space')
+      player.pressingSpace = data.state;
   });
 
   // Send the client an initialisation pack of all of the items needed to draw
@@ -273,8 +293,8 @@ Projectile = function(parent, angle, xPos, yPos) {
       // If the projectile is in contact with a Player that can be targeted by its creator
       if(self.getDistance(p) < TILE_SIZE / 2 && self.parent !== p.assignment) {
         // Decrease the players speed by 0.5 until it's at 3/5ths
-        if(p.spd > p.maxSpd * 0.6) {
-          p.spd -= 0.5;
+        if(p.currSpd > p.baseSpd * 0.6) {
+          p.currSpd -= 0.5;
         }
         // Remove the projectile
         self.toRemove = true;
