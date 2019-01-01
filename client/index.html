@@ -379,12 +379,11 @@
 
   // Draw the assignment & score in the top left of the canvas
   var drawScore = function() {
-    gameboard.fillStyle = 'black';
     if(Player.list[selfId] !== undefined) {
       if(Player.list[selfId].assignment === "C")
-        gameboard.fillText("You are the cat! Your score is: " + Player.list[selfId].score, 0, 30);
+        gameboard.fillText("You are the cat! Your score is: " + Player.list[selfId].score, 5, 490);
       if(Player.list[selfId].assignment === "M")
-        gameboard.fillText("You are the mouse! Your score is: " + Player.list[selfId].score, 0, 30);
+        gameboard.fillText("You are a mouse! Your score is: " + Player.list[selfId].score, 5, 490);
     }
   }
 

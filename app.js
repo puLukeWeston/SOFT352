@@ -17,7 +17,9 @@ serv.listen(2000);
 console.log("Server Started.");
 
 var SOCKET_LIST = {};
+var ROOM_SIZE = 6;
 
+// Returns either the data associated with a set of user credentials, or false if they don't exist in the db
 var isValidPassword = function(data, cb) {
   db.account.find({username:data.username, password:data.password}, function(err, res) {
     if(res[0])
@@ -27,6 +29,7 @@ var isValidPassword = function(data, cb) {
   });
 }
 
+// Returns true or false depending on if the username already exists in the db
 var isUsernameTaken = function(data, cb) {
   db.account.find({username:data.username}, function(err, res) {
     if(res[0])
@@ -36,23 +39,29 @@ var isUsernameTaken = function(data, cb) {
   });
 }
 
+// Adds a new set of credentials to the db
 var addUser = function(data, cb) {
   db.account.insert({username:data.username, password:data.password}, function(err, res) {
     cb();
   });
 }
 
-var count = 0;
+var currentMap = Maps("blueprints");
+
 var io = require('socket.io')(serv,{});
 io.sockets.on('connection', function(socket) {
-  // Give the client an ID (temporary functionality)
+
   socket.id = Math.random();
+  // The socket associated with each socket.id is required for occasional use such as in the informLobby subroutine
   SOCKET_LIST[socket.id] = {socket:socket};
 
+  // Upon receiving a signUp request
   socket.on('signUp', function(data) {
+    // Check if the username is taken already & respond with false if it does
     isUsernameTaken(data, function(res) {
       if(res)
         socket.emit('signUpResponse', {success:false});
+      // If it doesn't already exist, add a new user to the db with the given credentials
       else {
         addUser(data, function() {
           socket.emit('signUpResponse', {success:true});
@@ -61,37 +70,44 @@ io.sockets.on('connection', function(socket) {
     });
   });
 
+  // Upon receiving a login request
   socket.on('login', function(data) {
+    // Check to see if the credentials are valid
     isValidPassword(data, function(res) {
-      var userDetails = JSON.parse(JSON.stringify(res));
-
+      // If they aren't respond to the client with a failure
       if(!res) {
         socket.emit('loginResponse', {success:false, reason:"Username/Password combination not recognised"});
         return;
       }
 
+      // Create a temp boolean flag
       var found = false;
+      // Search through all the clients connected to see if any of them already have the username associated with the attempted login
       for(var i in SOCKET_LIST) {
-        if(SOCKET_LIST[i].username === userDetails.username)
+        if(SOCKET_LIST[i].username === data.username)
           found = true;
       }
 
+      // If it wasn't found
       if(!found) {
-          socket.emit('loginResponse', {success:true, id:userDetails.username});
-          SOCKET_LIST[socket.id].username = userDetails.username;
-          informLobby();
+        // Respond with a success
+        socket.emit('loginResponse', {success:true, id:data.username});
+        // Associate that username with the socket which made the request
+        SOCKET_LIST[socket.id].username = data.username;
+        informLobby();
       } else
+        // If the boolean is true it means the account is already logged on (theoretically), or at least somebody on the account
         socket.emit('loginResponse', {success:false, reason:"Account already in use"});
     });
   });
 
   socket.on('joinRoom', function(data) {
 
-    if(getRoomInformation(data.roomname).total < 6) {
+    if(getRoomInformation(data.roomname).total < ROOM_SIZE) {
 
       if(data.choice === "C" && getRoomInformation(data.roomname).cats !== 0)
         socket.emit('joinRoomResponse', {success:false, reason:"There is already a cat in that room!"});
-      else if(data.choice === "M" && getRoomInformation(data.roomname).total >= 5)
+      else if(data.choice === "M" && getRoomInformation(data.roomname).total >= ROOM_SIZE - 1)
         socket.emit('joinRoomResponse', {success:false, reason:"There are too many mice in there already!"});
       else {
         SOCKET_LIST[socket.id].roomname = data.roomname;
@@ -109,8 +125,6 @@ io.sockets.on('connection', function(socket) {
     SOCKET_LIST[socket.id].roomname = "";
     SOCKET_LIST[socket.id].choice = "";
     Player.onDisconnect(SOCKET_LIST[socket.id].username);
-
-    //socket.emit('leaveResponse', {success:true});
     informLobby();
 
   })
@@ -165,23 +179,16 @@ function informLobby() {
       var pack = {
         Room1: getRoomInformation("Room1")
       }
-      console.log(pack);
       SOCKET_LIST[i].socket.emit('lobbyInfo', pack);
     }
   }
 }
 
-currentMap = Maps("blueprints");
 
 createItems = function() {
-  for(var i = 0; i < 250; i++) {
-    var x = randomInt(0, currentMap.width * 2);
-    var y = randomInt(0, currentMap.height * 2);
-    if(!currentMap.isPositionWall(x, y))
-    var cheese = Cheese(x + " " + y + ": " + randomInt(0, 10000), x, y);
+  for(var i = 0; i < currentMap.taps.length; i++) {
+    Tap(currentMap.taps[i].id, currentMap.taps[i].owner, currentMap.taps[i].x, currentMap.taps[i].y);
   }
-  Tap(1, "M", 1584, 448);
-  Tap(2, "M", 100, 100);
 }
 createItems();
 
@@ -208,9 +215,13 @@ setInterval(function() {
   }
 },1000/20);
 
+// Every 10 seconds, perform this task
 setInterval(function() {
-  var amount = 200 - Cheese.listSize();
+  // Calculate how far below 250 the amount of cheeses is
+  var amount = 250 - Cheese.listSize();
+  // If there is an amount under 250
   if(amount >= 0)
+    // Create that amount of new Cheeses randonly placed around the map (As long as their not colliding with a wall)
     for(var i = 0; i < amount; i++) {
       var x = randomInt(0, currentMap.width * 2);
       var y = randomInt(0, currentMap.height * 2);
