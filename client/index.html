@@ -1,22 +1,33 @@
-<div id="loginDiv">
-  Username: <input id="loginDivUsername" type="text"></input>
-  Password: <input id="loginDivPassword" type="password"></input>
-  <button id="loginDivLogin">Login In</button>
-  <button id="loginDivSignUp">Sign Up</button>
-  <p id=signInInfo></p>
+<div id="loginDiv" align="center">
+  <h1 style="font-family:Lucida Console">JOM AND TERRY</h1>
+  <p style="font-family:Lucida Console">CAT CAN'T CATCH<p>
+    <br>
+  <div>
+    Username: <input id="loginDivUsername" type="text"></input>
+    <br><br>
+    Password: <input id="loginDivPassword" type="password"></input>
+    <br><br>
+    <button id="loginDivLogin">Login In</button>
+    <button id="loginDivSignUp">Sign Up</button>
+    <p id=signInInfo></p>
+  </div>
 </div>
 
 <div id="joinGameDiv" style="display:none;">
-  <p>There are only limited spaces, but try joining!</p>
-  <p style="font-weight:bold;">Room1:</p>
-  <button id="joinRoom1AsCat">Join as Cat!</button>
-  <button id="joinRoom1AsMouse">Join as Mouse!</button>
-  <p id=roomRoom1GameInfo></p>
-  <p id="endGameInfo"></p>
+  <div id="room1Container">
+    <p align="center" style="font-weight:bold;">Room 1:</p>
+    <button id="joinRoom1AsCat">Join as Cat!</button>
+    <button id="joinRoom1AsMouse">Join as Mouse!</button>
+    <p align="center" id=roomRoom1GameInfo></p>
+    <p align="center" id="endGameInfo"></p>
+  </div>
 </div>
 
 <div id="gameDiv" style="display:none;">
-  <canvas id="gameboard" width="750" height="500" style="border:1px solid #000000;"></canvas>
+  <div>
+    <canvas id="gameboard" width="750" height="500" style="border:1px solid #000000;"></canvas>
+  </div>
+  <p id="gameInformation"></p>
   <button id="leaveGame">Leave Game</button>
 </div>
 
@@ -41,6 +52,7 @@
   var canvas = document.getElementById("gameboard");
   var gameboard = canvas.getContext("2d");
   gameboard.font = '20px Arial';
+  var gameInformation = document.getElementById("gameInformation");
   var leaveGame = document.getElementById("leaveGame");
 
   var user = {
@@ -381,9 +393,9 @@
   var drawScore = function() {
     if(Player.list[selfId] !== undefined) {
       if(Player.list[selfId].assignment === "C")
-        gameboard.fillText("You are the cat! Your score is: " + Player.list[selfId].score, 5, 490);
+        gameInformation.innerHTML = "You are the cat! Your score is: " + Player.list[selfId].score;
       if(Player.list[selfId].assignment === "M")
-        gameboard.fillText("You are a mouse! Your score is: " + Player.list[selfId].score, 5, 490);
+        gameInformation.innerHTML = "You are a mouse! Your score is: " + Player.list[selfId].score;
     }
   }
 
