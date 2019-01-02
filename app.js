@@ -7,6 +7,9 @@ var serv = require('http').Server(app);
 var entity = require('./classes/Entity.js');
 var maps = require('./classes/Map.js');
 
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
+
 app.get('/',function(req, res) {
   res.sendFile(__dirname + '/client/index.html');
 });
@@ -21,10 +24,11 @@ var ROOM_SIZE = 6;
 
 // Returns either the data associated with a set of user credentials, or false if they don't exist in the db
 var isValidPassword = function(data, cb) {
-  db.account.find({username:data.username, password:data.password}, function(err, res) {
-    if(res[0])
-      cb(res[0]);
-    else
+  db.account.find({username:data.username}, function(err, res) {
+    if(res[0] !== undefined) {
+      var hash = res[0].password;
+      cb(bcrypt.compareSync(data.password, hash));
+    } else
       cb(false);
   });
 }
@@ -41,7 +45,8 @@ var isUsernameTaken = function(data, cb) {
 
 // Adds a new set of credentials to the db
 var addUser = function(data, cb) {
-  db.account.insert({username:data.username, password:data.password}, function(err, res) {
+  var hash = bcrypt.hashSync(data.password, saltRounds);
+  db.account.insert({username:data.username, password:hash}, function(err, res) {
     cb();
   });
 }
