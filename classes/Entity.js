@@ -64,7 +64,7 @@ Entity.getFrameUpdateData = function() {
 }
 
 // Create a new Player object
-Player = function(socket, id, assignment) {
+Player = function(id, assignment) {
   var self = Entity();
   // Overwrite the default entity attributes
   if(assignment === "C") {
@@ -78,7 +78,6 @@ Player = function(socket, id, assignment) {
     self.baseSpd = 16;
     self.maxSpd = 16;
   }
-  self.socket = socket;
   self.id = id;
   // Add Player specific defaults
   self.assignment = assignment;
@@ -108,8 +107,7 @@ Player = function(socket, id, assignment) {
           p.lives--;
           if(p.lives == 0) {
             self.score++;
-            p.socket.emit('died', {score:p.score})
-            removePack.player.push({id:p.id, score:p.score});
+            removePack.player.push({id:p.id, score:p.score, reason:"died"});
             delete Player.list[i];
           } else {
             self.x = 480;
@@ -200,7 +198,7 @@ Player = function(socket, id, assignment) {
 
 Player.onConnect = function(socket, id, assignment) {
   // Create the client a new Player object based on the socket id
-  var player = Player(socket, id, assignment);
+  var player = Player(id, assignment);
 
   // Then add a listener for keypresses to update the position
   socket.on('keyPress', function(data) {
@@ -237,7 +235,7 @@ Player.getAllInitPack = function() {
 
 Player.onDisconnect = function(id) {
   delete Player.list[id];
-  removePack.player.push({id:id});
+  removePack.player.push({id:id, reason:"disconnected"});
 
 }
 

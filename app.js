@@ -199,23 +199,24 @@ createItems();
 
 setInterval(function() {
   var packs = Entity.getFrameUpdateData();
-  if(packs.removePack.player.length > 0) {
-    for(var p in packs.removePack.player) {
-      for(var i in SOCKET_LIST) {
-        if(SOCKET_LIST[i].username !== undefined && SOCKET_LIST[i].username === packs.removePack.player[p].id) {
-          SOCKET_LIST[i].roomname = "";
-          SOCKET_LIST[i].choice = "";
-        }
-      }
-    }
-    informLobby();
-  }
   // Send the updated info back to update the clients screen
   for(var i in SOCKET_LIST) {
     if(SOCKET_LIST[i].roomname === "Room1") {
       SOCKET_LIST[i].socket.emit('init', packs.initPack);
       SOCKET_LIST[i].socket.emit('update', packs.updatePack);
       SOCKET_LIST[i].socket.emit('remove', packs.removePack);
+    }
+  }
+
+  for(var i = 0; i < packs.removePack.player.length; i++) {
+    if(packs.removePack.player[i].reason === "died") {
+      for(var s in SOCKET_LIST) {
+        if(SOCKET_LIST[s].username !== undefined && packs.removePack.player[i].id === SOCKET_LIST[s].username) {
+          SOCKET_LIST[s].roomname = "";
+          SOCKET_LIST[s].choice = "";
+          informLobby();
+        }
+      }
     }
   }
 },1000/20);

@@ -169,60 +169,8 @@ describe("Server-side App Responses", function() {
   });
 
   describe("Accepting KeyPresses", function() {
-
-    it('Should accept Up key press from player 1 to move Mouse', function(done) {
-      player1.emit('keyPress', {inputId:'up',state:true});
-      player1.on('update', function(updatePack) {
-        for(var i = 0; i < updatePack.player.length; i++){
-          if(updatePack.player[i].id === correctCred.username){
-            updatePack.player[i].x.should.equal(1125);
-            assert.isBelow(updatePack.player[i].y, 965);
-            done();
-          }
-        }
-      });
-    });
-
-    it('Should accept Down key press from player 1 to move Mouse', function(done) {
-      player1.emit('keyPress', {inputId:'down',state:true});
-      player1.on('update', function(updatePack) {
-        for(var i = 0; i < updatePack.player.length; i++){
-          if(updatePack.player[i].id === correctCred.username){
-            updatePack.player[i].x.should.equal(1125);
-            assert.isAbove(updatePack.player[i].y, 965);
-            done();
-          }
-        }
-      });
-    });
-
-    it('Should accept Left key press from player 1 to move Mouse', function(done) {
-      player1.emit('keyPress', {inputId:'left',state:true});
-      player1.on('update', function(updatePack) {
-        for(var i = 0; i < updatePack.player.length; i++){
-          if(updatePack.player[i].id === correctCred.username){
-            assert.isBelow(updatePack.player[i].x, 1125);
-            updatePack.player[i].y.should.equal(965);
-            done();
-          }
-        }
-      });
-    });
-
-    it('Should accept Right key press from player 1 to move Mouse', function(done) {
-      player1.emit('keyPress', {inputId:'right',state:true});
-      player1.on('update', function(updatePack) {
-        for(var i = 0; i < updatePack.player.length; i++){
-          if(updatePack.player[i].id === correctCred.username){
-            assert.isAbove(updatePack.player[i].x, 1125);
-            updatePack.player[i].y.should.equal(965);
-            done();
-          }
-        }
-      });
-    });
-
-    it('Should accept Up key press from player 2 to move Cat', function(done) {
+    
+    it('Should accept Up key press from player to move character', function(done) {
       player2.emit('keyPress', {inputId:'up',state:true});
       player2.on('update', function(updatePack) {
         for(var i = 0; i < updatePack.player.length; i++){
@@ -235,7 +183,7 @@ describe("Server-side App Responses", function() {
       });
     });
 
-    it('Should accept Down key press from player 2 to move Cat', function(done) {
+    it('Should accept Down key press from player to move character', function(done) {
       player2.emit('keyPress', {inputId:'down',state:true});
       player2.on('update', function(updatePack) {
         for(var i = 0; i < updatePack.player.length; i++){
@@ -248,7 +196,7 @@ describe("Server-side App Responses", function() {
       });
     });
 
-    it('Should accept Left key press from player 2 to move Cat', function(done) {
+    it('Should accept Left key press from player to move character', function(done) {
       player2.emit('keyPress', {inputId:'left',state:true});
       player2.on('update', function(updatePack) {
         for(var i = 0; i < updatePack.player.length; i++){
@@ -261,7 +209,7 @@ describe("Server-side App Responses", function() {
       });
     });
 
-    it('Should accept Right key press from player 2 to move Cat', function(done) {
+    it('Should accept Right key press from player to move character', function(done) {
       player2.emit('keyPress', {inputId:'right',state:true});
       player2.on('update', function(updatePack) {
         for(var i = 0; i < updatePack.player.length; i++){

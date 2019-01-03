@@ -129,12 +129,6 @@
       roomRoom1GameInfo.innerHTML = "Cats: " + data.Room1.cats + ", Mice: " + data.Room1.mice;
   });
 
-  socket.on('died', function(data) {
-    gameDiv.style.display = "none";
-    joinGameDiv.style.display = "inline-block";
-    endGameInfo.innerHTML = "You died! Your score was: " + data.score;
-  });
-
   var WIDTH = 750;
   var HEIGHT = 500;
 
