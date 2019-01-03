@@ -9,9 +9,9 @@ var options = {
   'force new connection': true
 };
 
-var correctCred = {'username':'Luke','password':'pass'};
-var correctCred2 = {'username':'David','password':'soft352'};
-var correctCred3 = {'username':'AzureDiamond','password':'hunter2'};
+var correctCred = {'username':'Luke','password':'Pa55'};
+var correctCred2 = {'username':'David','password':'Soft352'};
+var correctCred3 = {'username':'AzureDiamond','password':'Hunter2'};
 var incorrectCred = {'username':'David','password':'false'};
 
 describe("Server-side App Responses", function() {
@@ -169,7 +169,7 @@ describe("Server-side App Responses", function() {
   });
 
   describe("Accepting KeyPresses", function() {
-    
+
     it('Should accept Up key press from player to move character', function(done) {
       player2.emit('keyPress', {inputId:'up',state:true});
       player2.on('update', function(updatePack) {

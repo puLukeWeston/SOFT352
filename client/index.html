@@ -44,6 +44,9 @@
   var loginDivPassword = document.getElementById("loginDivPassword");
   var loginDivLogin = document.getElementById("loginDivLogin");
   var loginDivSignUp = document.getElementById("loginDivSignUp");
+  var validateUsername = /^[a-zA-Z0-9.-]{4,15}$/
+  var validatePassword = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{4,15}$/;
+
   var joinRoom1AsCat = document.getElementById("joinRoom1AsCat");
   var joinRoom1AsMouse = document.getElementById("joinRoom1AsMouse");
   var roomRoom1GameInfo = document.getElementById("roomRoom1GameInfo");
@@ -78,11 +81,31 @@
   ldclient.on('change', render);
 
   loginDivSignUp.onclick = function() {
+    signInInfo.innerHTML = "";
+    if(!loginDivUsername.value.match(validateUsername)) {
+      signInInfo.innerHTML = "Username must be between 4 & 15 characters long, containing only . - and alphanumerics.";
+      return;
+    }
+    if(!loginDivPassword.value.match(validatePassword)) {
+      signInInfo.innerHTML = "Password must be between 4 & 15 characters long, containing at least one upper case, one lower case, and one number.";
+      return;
+    }
+
     socket.emit('signUp', {username:loginDivUsername.value, password:loginDivPassword.value});
   }
 
   loginDivLogin.onclick = function() {
-    socket.emit('login', {username:loginDivUsername.value, password:loginDivPassword.value});
+    var validPair = true;
+    if(!loginDivUsername.value.match(validateUsername))
+      validPair = false;
+    if(!loginDivPassword.value.match(validatePassword))
+      validPair = false;
+
+    if(validPair)
+      socket.emit('login', {username:loginDivUsername.value, password:loginDivPassword.value});
+    else
+      signInInfo.innerHTML = "Username/Password combination not recognised";
+
   }
 
   joinRoom1AsCat.onclick = function() {
