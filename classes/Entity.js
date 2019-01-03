@@ -414,12 +414,13 @@ Tap.update = function() {
   return pack;
 }
 
-Cheese = function(id, x, y) {
+Cheese = function(id, x, y, award) {
   var self = Entity();
   self.id = id;
   self.x = x;
   self.y = y;
   self.consumed = false;
+  self.award = award;
 
   self.update = function() {
 
@@ -428,7 +429,7 @@ Cheese = function(id, x, y) {
       // If the cheese is in contact with a Mouse
       if(self.getDistance(p) < TILE_SIZE/2 && p.assignment === "M") {
         // Inrease the players score by 1
-        p.score++;
+        p.score += self.award;
         // Remove the cheese
         self.consumed = true;
       }
@@ -448,7 +449,8 @@ Cheese = function(id, x, y) {
     return {
       id:self.id,
       x:self.x,
-      y:self.y
+      y:self.y,
+      award:self.award
     };
   }
 
@@ -456,7 +458,7 @@ Cheese = function(id, x, y) {
     return {
       id:self.id,
       x:self.x,
-      y:self.y
+      y:self.y,
     };
   }
 

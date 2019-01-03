@@ -25,10 +25,11 @@
 
 <div id="gameDiv" style="display:none;">
   <div>
+    <p id="gameInformation"></p>
     <canvas id="gameboard" width="750" height="500" style="border:1px solid #000000;"></canvas>
   </div>
-  <p id="gameInformation"></p>
   <button id="leaveGame">Leave Game</button>
+  <h3 id="announceFeature"></h3>
 </div>
 
 <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
@@ -54,8 +55,8 @@
 
   var canvas = document.getElementById("gameboard");
   var gameboard = canvas.getContext("2d");
-  gameboard.font = '20px Arial';
   var gameInformation = document.getElementById("gameInformation");
+  var announceFeature = document.getElementById("announceFeature");
   var leaveGame = document.getElementById("leaveGame");
 
   var user = {
@@ -135,13 +136,17 @@
     if(data.success)
       signInInfo.innerHTML = "Sign up was successful.";
     else
-      signInInfo.innerHTML = "Sign up was unsuccessful.";
+      signInInfo.innerHTML = "Sign up was unsuccessful. Username already taken.";
   });
 
   socket.on('joinRoomResponse', function(data) {
     if(data.success) {
       joinGameDiv.style.display = "none";
       gameDiv.style.display = "inline-block";
+      announceFeature.innerHTML = "Mice, check out those new cheeses! Cats, you better guard them well, they're worth 5 points each!";
+      setTimeout(function() {
+        announceFeature.innerHTML = "";
+      }, 10000)
     } else {
       endGameInfo.innerHTML = data.reason;
     }
@@ -162,6 +167,8 @@
   Img.mouse.src = '/client/img/Mouse16.png';
   Img.cheese =  new Image();
   Img.cheese.src = '/client/img/Cheese16.png';
+  Img.bigCheese = new Image();
+  Img.bigCheese.src = '/client/img/BigCheese16.png';
 
 
   // ID given to this player on the server-side
@@ -246,14 +253,23 @@
     self.id = initPack.id;
     self.x = initPack.x;
     self.y = initPack.y;
+    self.award = initPack.award;
     self.consumed = initPack.consumed;
 
     self.draw = function() {
       var x = self.x - Player.list[selfId].x + WIDTH/2;
       var y = self.y - Player.list[selfId].y + HEIGHT/2;
-      var width = Img.cheese.width * 2;
-      var height = Img.cheese.height * 2;
-      gameboard.drawImage(Img.cheese, 0, 0, Img.cheese.width, Img.cheese.height, x - width/2, y - height/2, width, height);
+      // If the cheese is worth 1 point as an award for being collected it requires the default texture
+      if(self.award === 1) {
+        var width = Img.cheese.width * 2;
+        var height = Img.cheese.height * 2;
+        gameboard.drawImage(Img.cheese, 0, 0, Img.cheese.width, Img.cheese.height, x - width/2, y - height/2, width, height);
+      // If the award is 5 points then it should use a "big cheese" texture
+      } else if(self.award === 5) {
+        var width = Img.bigCheese.width * 2;
+        var height = Img.bigCheese.height * 2;
+        gameboard.drawImage(Img.bigCheese, 0, 0, Img.bigCheese.width, Img.bigCheese.height, x - width/2, y - height/2, width, height);
+      }
     }
 
     Cheese.list[self.id] = self;

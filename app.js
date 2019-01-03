@@ -232,6 +232,10 @@ setInterval(function() {
       var x = randomInt(0, currentMap.width * 2);
       var y = randomInt(0, currentMap.height * 2);
       if(!currentMap.isPositionWall(x, y))
-        var cheese = Cheese(x + " " + y + ": " + randomInt(0, 10000), x, y);
+        // Give a 5% chance of producing a "big cheese" worth more points
+        if(randomInt(0, 100) < 5)
+          var cheese = Cheese(x + " " + y + ": " + randomInt(0, 10000), x, y, 5);
+        else
+          var cheese = Cheese(x + " " + y + ": " + randomInt(0, 10000), x, y, 1);
     }
 }, 10000);
