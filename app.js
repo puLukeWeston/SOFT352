@@ -108,22 +108,25 @@ io.sockets.on('connection', function(socket) {
 
   socket.on('joinRoom', function(data) {
 
-    if(getRoomInformation(data.roomname).total < ROOM_SIZE) {
+    if(SOCKET_LIST[socket.id].username !== undefined) {
+      if(getRoomInformation(data.roomname).total < ROOM_SIZE) {
 
-      if(data.choice === "C" && getRoomInformation(data.roomname).cats !== 0)
-        socket.emit('joinRoomResponse', {success:false, reason:"There is already a cat in that room!"});
-      else if(data.choice === "M" && getRoomInformation(data.roomname).total >= ROOM_SIZE - 1)
-        socket.emit('joinRoomResponse', {success:false, reason:"There are too many mice in there already!"});
-      else {
-        SOCKET_LIST[socket.id].roomname = data.roomname;
-        SOCKET_LIST[socket.id].choice = data.choice;
-        socket.emit('joinRoomResponse', {success:true});
-        Player.onConnect(socket, SOCKET_LIST[socket.id].username, data.choice);
-        informLobby();
-      }
+        if(data.choice === "C" && getRoomInformation(data.roomname).cats !== 0)
+          socket.emit('joinRoomResponse', {success:false, reason:"There is already a cat in that room!"});
+        else if(data.choice === "M" && getRoomInformation(data.roomname).total >= ROOM_SIZE - 1)
+          socket.emit('joinRoomResponse', {success:false, reason:"There are too many mice in there already!"});
+        else {
+          SOCKET_LIST[socket.id].roomname = data.roomname;
+          SOCKET_LIST[socket.id].choice = data.choice;
+          socket.emit('joinRoomResponse', {success:true});
+          Player.onConnect(socket, SOCKET_LIST[socket.id].username, data.choice);
+          informLobby();
+        }
 
-    } else
-      socket.emit('joinRoomResponse', {success:false});
+      } else
+        socket.emit('joinRoomResponse', {success:false});
+      } else
+        socket.emit('joinRoomResponse', {success:false});  
   });
 
   socket.on('leaveRoom', function() {
