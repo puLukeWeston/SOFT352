@@ -29,8 +29,16 @@ Entity = function() {
   return self;
 }
 
+var lastUpdate = {
+  player:[],
+  projectile:[],
+  tap:[],
+  cheese:[],
+}
 Entity.getFrameUpdateData = function() {
 
+ Cheese.update();
+ 
   var pack = {
     initPack:{
       player:initPack.player,
@@ -47,10 +55,35 @@ Entity.getFrameUpdateData = function() {
     updatePack:{
       player:Player.update(),
       projectile:Projectile.update(),
-      tap:Tap.update(),
-      cheese:Cheese.update()
+      tap:Tap.update()
     }
   }
+
+  for(var i in pack.updatePack.tap) {
+    if(!containsObject(pack.updatePack.tap[i], lastUpdate.tap)) {
+      for(var j in lastUpdate.tap)
+        if(lastUpdate.tap[j].id === pack.updatePack.tap[i].id)
+          delete lastUpdate.tap[j];
+
+      lastUpdate.tap.push(pack.updatePack.tap[i]);
+    } else {
+      delete pack.updatePack.tap[i];
+    }
+  }
+
+  for(var i in pack.updatePack.player) {
+    if(!containsObject(pack.updatePack.player[i], lastUpdate.player)) {
+      for(var j in lastUpdate.player)
+        if(lastUpdate.player[j].id === pack.updatePack.player[i].id)
+          delete lastUpdate.player[j];
+
+      lastUpdate.player.push(pack.updatePack.player[i]);
+    } else {
+      delete pack.updatePack.player[i];
+    }
+  }
+  pack.updatePack.player = pack.updatePack.player.filter(Boolean);
+  pack.updatePack.tap = pack.updatePack.tap.filter(Boolean);
 
   initPack.player = [];
   initPack.projectile = [];
@@ -476,7 +509,6 @@ Cheese.getAllInitPack = function() {
 }
 
 Cheese.update = function() {
-  var pack = [];
   for(var i in Cheese.list) {
     var cheese = Cheese.list[i];
     cheese.update();
@@ -486,7 +518,6 @@ Cheese.update = function() {
       removePack.cheese.push(cheese.id);
     }
   }
-  return pack;
 }
 
 Cheese.listSize = function() {
@@ -496,3 +527,12 @@ Cheese.listSize = function() {
     }
     return size;
 };
+
+function containsObject(obj, list) {
+  for (var i = 0; i < list.length; i++) {
+    if (JSON.stringify(list[i]) === JSON.stringify(obj)) {
+      return true;
+    }
+  }
+  return false;
+}
