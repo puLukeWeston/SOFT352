@@ -1,8 +1,10 @@
 var mongojs = require("mongojs");
 var db = mongojs('localhost:27017/jomAndTerry', ['account']);
 
-var express = require('express');
-var app = express();
+const express = require('express');
+const app = express();
+const jwt = require('jsonwebtoken');
+
 var serv = require('http').Server(app);
 var entity = require('./classes/Entity.js');
 var maps = require('./classes/Map.js');
@@ -20,6 +22,7 @@ serv.listen(2000);
 console.log("Server Started.");
 
 var SOCKET_LIST = {};
+var RECENTLY_USED = [];
 var ROOM_SIZE = 6;
 
 // Returns either the data associated with a set of user credentials, or false if they don't exist in the db
@@ -60,6 +63,20 @@ io.sockets.on('connection', function(socket) {
   // The socket associated with each socket.id is required for occasional use such as in the informLobby subroutine
   SOCKET_LIST[socket.id] = {socket:socket};
 
+  // If the client refreshed their page they might still have a valid token stores in the session
+  socket.on('attemptReconnect', function(data) {
+    for(var i in RECENTLY_USED) {
+      // If any of the recently disconnected clients had the same token
+      if(data.token === RECENTLY_USED[i].token) {
+        // Respond with a successful reconnect and shift the data to the new socket
+        SOCKET_LIST[socket.id].username = RECENTLY_USED[i].username;
+        SOCKET_LIST[socket.id].token = RECENTLY_USED[i].token;
+        socket.emit('reconnect', {result:true, id:SOCKET_LIST[socket.id].username});
+        break;
+      }
+    }
+  });
+
   // Upon receiving a signUp request
   socket.on('signUp', function(data) {
     // Check if the username is taken already & respond with false if it does
@@ -95,8 +112,17 @@ io.sockets.on('connection', function(socket) {
 
       // If it wasn't found
       if(!found) {
-        // Respond with a success
-        socket.emit('loginResponse', {success:true, id:data.username});
+        // Create a new token relating to the username, secret, & time
+        jwt.sign({user:data.username}, 'secrets', function(err, token) {
+          // If the username already existed in the RECENTLY_USED array, remove them now as they would have a new token
+          for(var i in RECENTLY_USED) {
+            if(RECENTLY_USED[i].username === data.username)
+              delete RECENTLY_USED[i];
+          }
+          // Respond with a success
+          socket.emit('loginResponse', {success:true, id:data.username, token:token});
+          SOCKET_LIST[socket.id].token = token;
+        });
         // Associate that username with the socket which made the request
         SOCKET_LIST[socket.id].username = data.username;
         informLobby();
@@ -154,6 +180,18 @@ io.sockets.on('connection', function(socket) {
   // If the client disconnects
   socket.on('disconnect',function(){
     Player.onDisconnect(SOCKET_LIST[socket.id].username);
+
+    // If the client had logged in they would have a username
+    if(SOCKET_LIST[socket.id].username !== undefined) {
+      // If the username already existed in the RECENTLY_USED array
+      for(var i in RECENTLY_USED) {
+        if(RECENTLY_USED[i].username === SOCKET_LIST[socket.id].username)
+        // Remove the old entry
+          delete RECENTLY_USED[i];
+      }
+      // Add the disconnected client to the RECENTLY_USED array
+      RECENTLY_USED.push({username:SOCKET_LIST[socket.id].username, token:SOCKET_LIST[socket.id].token, time:Date.now()});
+    }
     delete SOCKET_LIST[socket.id];
   });
 
@@ -223,6 +261,14 @@ setInterval(function() {
     }
   }
 },1000/20);
+
+// Remove RECENTLY_USED details after 30 seconds
+setInterval(function() {
+  for(var i in RECENTLY_USED) {
+    if(Date.now() - RECENTLY_USED[i].time >= 30000)
+      delete RECENTLY_USED[i];
+  }
+}, 1000)
 
 // Every 10 seconds, perform this task
 setInterval(function() {

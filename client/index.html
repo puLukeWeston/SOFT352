@@ -59,21 +59,29 @@
   var announceFeature = document.getElementById("announceFeature");
   var leaveGame = document.getElementById("leaveGame");
 
-  var user = {
-    firstName: 'Luke',
-    lastName: 'Weston',
-    key: 'luke@example.com',
-    custom: {
-      groups: 'beta_testers'
+  // Uppon connecting, attempt a reconnect (incase it was a page refresh)
+  socket.on('connect', function() {
+    // If it was a page refresh then there should still be data in sessionStorage
+    if(sessionStorage.getItem("token") !== undefined)
+      socket.emit('attemptReconnect', {token:sessionStorage.getItem("token")});
+  });
+
+  // If the reconnect response is valid
+  socket.on('reconnect', function(data) {
+    if(data.result) {
+      // Assign selfId (so the client knows which Player relates to the user)
+      selfId = data.id;
+      // Make the game visible
+      loginDiv.style.display = "none";
+      joinGameDiv.style.display = "inline-block";
     }
-  };
-  var ldclient = LDClient.initialize('5c2524ff53f8631ecef47a1b', user);
-  var shouldShowKillFeed = false;
+  })
+
+  var ldclient = LDClient.initialize('5c2524ff53f8631ecef47a1b', {firstName:'Luke', lastName:'Weston', key: 'luke@example.com'});
   var shouldShowLobbyInfo = false;
   var shouldAllowCatToBoost = false;
 
   function render() {
-    shouldShowKillFeed = ldclient.variation('kill-feed', false);
     shouldShowLobbyInfo = ldclient.variation('lobby-info', false);
     shouldAllowCatToBoost = ldclient.variation('cat-space-bar-action', false);
   }
@@ -125,6 +133,7 @@
 
   socket.on('loginResponse', function(data) {
     if(data.success) {
+      sessionStorage.setItem("token", data.token);
       selfId = data.id;
       loginDiv.style.display = "none";
       joinGameDiv.style.display = "inline-block";
