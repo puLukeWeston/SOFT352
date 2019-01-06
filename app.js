@@ -24,6 +24,9 @@ console.log("Server Started.");
 var SOCKET_LIST = {};
 var RECENTLY_USED = [];
 var ROOM_SIZE = 6;
+var GAME_LENGTH = 60000;
+var WINNING_AMOUNT = 100;
+var GAMES_STARTED = [ {roomname:"Room1", time:Date.now()} ];
 
 // Returns either the data associated with a set of user credentials, or false if they don't exist in the db
 var isValidPassword = function(data, cb) {
@@ -55,6 +58,10 @@ var addUser = function(data, cb) {
 }
 
 var currentMap = Maps("blueprints");
+for(var i = 0; i < currentMap.taps.length; i++) {
+  Tap(currentMap.taps[i].id, currentMap.taps[i].owner, currentMap.taps[i].x, currentMap.taps[i].y);
+}
+Cheese.generate();
 
 var io = require('socket.io')(serv,{});
 io.sockets.on('connection', function(socket) {
@@ -72,6 +79,7 @@ io.sockets.on('connection', function(socket) {
         SOCKET_LIST[socket.id].username = RECENTLY_USED[i].username;
         SOCKET_LIST[socket.id].token = RECENTLY_USED[i].token;
         socket.emit('reconnect', {result:true, id:SOCKET_LIST[socket.id].username});
+        informLobby();
         break;
       }
     }
@@ -144,7 +152,7 @@ io.sockets.on('connection', function(socket) {
         else {
           SOCKET_LIST[socket.id].roomname = data.roomname;
           SOCKET_LIST[socket.id].choice = data.choice;
-          socket.emit('joinRoomResponse', {success:true});
+          socket.emit('joinRoomResponse', {success:true, cheese:Cheese.getAllInitPack()});
           Player.onConnect(socket, SOCKET_LIST[socket.id].username, data.choice);
           informLobby();
         }
@@ -197,10 +205,6 @@ io.sockets.on('connection', function(socket) {
 
 });
 
-function randomInt(min, max) {
-  return Math.floor(Math.random() * (max - min+1) + min);
-}
-
 function getRoomInformation(room) {
   var cats = 0;
   var mice = 0;
@@ -230,28 +234,99 @@ function informLobby() {
   }
 }
 
-
-createItems = function() {
-  for(var i = 0; i < currentMap.taps.length; i++) {
-    Tap(currentMap.taps[i].id, currentMap.taps[i].owner, currentMap.taps[i].x, currentMap.taps[i].y);
-  }
-}
-createItems();
-
 setInterval(function() {
+  // Get the details of the entities within the game
   var packs = Entity.getFrameUpdateData();
-  // Send the updated info back to update the clients screen
-  for(var i in SOCKET_LIST) {
-    if(SOCKET_LIST[i].roomname === "Room1") {
-      SOCKET_LIST[i].socket.emit('init', packs.initPack);
-      SOCKET_LIST[i].socket.emit('update', packs.updatePack);
-      SOCKET_LIST[i].socket.emit('remove', packs.removePack);
+  // Create an array to hold details of games that have reached their time limit
+  var endedGames = [];
+
+      // If we wait until after the players are removed from the rooms (as is done below) then it retains data from
+      // previous game when they join a new one
+
+  // Cycle through the games currently running
+  for(var t in GAMES_STARTED) {
+    // If the game duration is more than the maximum allowed
+    if(Date.now() - GAMES_STARTED[t].time > GAME_LENGTH) {
+      // The cat wins because the time has ran out
+      var winner = null;
+      for(var i in SOCKET_LIST) {
+        if(SOCKET_LIST[i].choice === "C") {
+          winner = SOCKET_LIST[i].username
+          break;
+        }
+      }
+      // Add the room name to the list along with the details of why it is over
+      endedGames.push({roomname:GAMES_STARTED[t].roomname, reason:"Time ran out!", winner:winner});
+      // Restart the timer for the game
+      GAMES_STARTED[t].time = Date.now();
+      Cheese.generate();
     }
   }
 
+  for(var p in packs.updatePack.player) {
+    // If a player reaches the maximum score it means they would have won
+    if(packs.updatePack.player[p].score >= WINNING_AMOUNT) {
+      // Find the SOCKET_LIST entry relating to that player
+      for(var i in SOCKET_LIST) {
+        if(SOCKET_LIST[i].username === packs.updatePack.player[p].id) {
+          // Add the room name and the details of why the game is over
+          endedGames.push({roomname:SOCKET_LIST[i].roomname, reason:"Score limit reached!", winner:packs.updatePack.player[p].id});
+          // Restart the timer of the game
+          for(var t in GAMES_STARTED) {
+            if(GAMES_STARTED[t].roomname === SOCKET_LIST[i].roomname) {
+              GAMES_STARTED[t].time = Date.now();
+              Cheese.generate();
+              // Break the loop when found
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // If any of the games have ended
+  for(var g in endedGames) {
+    for(var i in SOCKET_LIST) {
+      // Find the clients connected to that game
+      if(SOCKET_LIST[i].roomname === endedGames[g].roomname) {
+        // Alert them that the game has finished, and who the winner is
+        SOCKET_LIST[i].socket.emit('gameOver', {reason:endedGames[g].reason, winner:endedGames[g].winner})
+        // Reset the SOCKET_LIST details as they would have returned to the lobby
+        SOCKET_LIST[i].roomname = "";
+        SOCKET_LIST[i].choice = "";
+        // Get a new version of the removePack (as the cheese will now be gone)
+        var packs = Entity.getFrameUpdateData();
+        // Send it to those which were in the room that has now ended
+        SOCKET_LIST[i].socket.emit('remove', packs.removePack);
+        informLobby();
+      }
+    }
+  }
+
+  // For those still in games; send the updated info back to update the clients canvas
+  for(var i in SOCKET_LIST) {
+    if(SOCKET_LIST[i].roomname === "Room1") {
+      // Find out when their game started so the user can be informed of how long is left
+      var started = null;
+      for(var g in GAMES_STARTED) {
+        if(GAMES_STARTED[g].roomname === SOCKET_LIST[i].roomname) {
+          started = GAMES_STARTED[g].time;
+          break;
+        }
+      }
+      SOCKET_LIST[i].socket.emit('init', packs.initPack);
+      SOCKET_LIST[i].socket.emit('update', packs.updatePack);
+      SOCKET_LIST[i].socket.emit('remove', packs.removePack);
+      SOCKET_LIST[i].socket.emit('timeLeft', Math.round((Date.now() - started) / 1000));
+    }
+  }
+
+  // If any of the players have died
   for(var i = 0; i < packs.removePack.player.length; i++) {
     if(packs.removePack.player[i].reason === "died") {
       for(var s in SOCKET_LIST) {
+        // Set their details back to default as they have been removed from the room
         if(SOCKET_LIST[s].username !== undefined && packs.removePack.player[i].id === SOCKET_LIST[s].username) {
           SOCKET_LIST[s].roomname = "";
           SOCKET_LIST[s].choice = "";
@@ -260,6 +335,7 @@ setInterval(function() {
       }
     }
   }
+
 },1000/20);
 
 // Remove RECENTLY_USED details after 30 seconds
@@ -268,23 +344,4 @@ setInterval(function() {
     if(Date.now() - RECENTLY_USED[i].time >= 30000)
       delete RECENTLY_USED[i];
   }
-}, 1000)
-
-// Every 10 seconds, perform this task
-setInterval(function() {
-  // Calculate how far below 250 the amount of cheeses is
-  var amount = 250 - Cheese.listSize();
-  // If there is an amount under 250
-  if(amount >= 0)
-    // Create that amount of new Cheeses randonly placed around the map (As long as their not colliding with a wall)
-    for(var i = 0; i < amount; i++) {
-      var x = randomInt(0, currentMap.width * 2);
-      var y = randomInt(0, currentMap.height * 2);
-      if(!currentMap.isPositionWall(x, y))
-        // Give a 5% chance of producing a "big cheese" worth more points
-        if(randomInt(0, 100) < 5)
-          var cheese = Cheese(x + " " + y + ": " + randomInt(0, 10000), x, y, 5);
-        else
-          var cheese = Cheese(x + " " + y + ": " + randomInt(0, 10000), x, y, 1);
-    }
-}, 10000);
+}, 1000);

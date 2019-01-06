@@ -75,6 +75,21 @@
       loginDiv.style.display = "none";
       joinGameDiv.style.display = "inline-block";
     }
+  });
+
+  socket.on('gameOver', function(data) {
+    gameDiv.style.display = "none";
+    joinGameDiv.style.display = "inline-block";
+    var winner = null;
+    if(data.winner === null)
+      winner = "nobody!";
+    else
+      winner = data.winner;
+    endGameInfo.innerHTML = "Game over! " + data.reason + " The winner was " + winner;
+  });
+
+  socket.on('timeLeft', function(data) {
+    console.log(data);
   })
 
   var ldclient = LDClient.initialize('5c2524ff53f8631ecef47a1b', {firstName:'Luke', lastName:'Weston', key: 'luke@example.com'});
@@ -152,6 +167,8 @@
     if(data.success) {
       joinGameDiv.style.display = "none";
       gameDiv.style.display = "inline-block";
+      for(var i = 0; i < data.cheese.length; i++)
+        new Cheese(data.cheese[i]);
       announceFeature.innerHTML = "Mice, check out those new cheeses! Cats, you better guard them well, they're worth 5 points each!";
       setTimeout(function() {
         announceFeature.innerHTML = "";
@@ -343,8 +360,14 @@
   });
 
   socket.on('remove', function(data) {
-    for(var i = 0; i < data.player.length; i++)
+    for(var i = 0; i < data.player.length; i++){
+      if(data.player[i].id === selfId && data.player[i].reason === "died") {
+        gameDiv.style.display = "none";
+        joinGameDiv.style.display = "inline-block";
+        endGameInfo.innerHTML = "You died! Your score was: " + data.player[i].score + ".";
+      }
       delete Player.list[data.player[i].id];
+    }
 
     for(var i = 0; i < data.projectile.length; i++)
       delete Projectile.list[data.projectile[i]];

@@ -89,6 +89,7 @@ Entity.getFrameUpdateData = function() {
   initPack.projectile = [];
   initPack.tap = [];
   initPack.cheese = [];
+  initPack.map = [];
   removePack.player = [];
   removePack.projectile = [];
   removePack.cheese = [];
@@ -121,7 +122,7 @@ Player = function(id, assignment) {
   self.pressingSpace = false;
   self.currSpd = self.baseSpd;
   self.score = 0;
-  self.lives = 3;
+  self.lives = 1;
   self.cooldownCatch = false;
 
   // Overwrite the super update function
@@ -245,15 +246,6 @@ Player.onConnect = function(socket, id, assignment) {
       player.pressingDown = data.state;
     if(data.inputId === 'space')
       player.pressingSpace = data.state;
-  });
-
-  // Send the client an initialisation pack of all of the items needed to draw
-  socket.emit('init', {
-    player:Player.getAllInitPack(),
-    projectile:Projectile.getAllInitPack(),
-    tap:Tap.getAllInitPack(),
-    cheese:Cheese.getAllInitPack(),
-    map:{id:currentMap.id, width:currentMap.width, height:currentMap.height, grid:currentMap.grid}
   });
 }
 Player.list = {};
@@ -520,6 +512,25 @@ Cheese.update = function() {
   }
 }
 
+Cheese.generate = function() {
+  // Delete all the old Cheeses
+  for(var c in Cheese.list) {
+    removePack.cheese.push(Cheese.list[c].id);
+    delete Cheese.list[c];
+  }
+  // Create 300 Cheeses randomly placed around the map (As long as their not colliding with a wall)
+  for(var i = 0; i < 300; i++) {
+    var x = randomInt(0, currentMap.width * 2);
+    var y = randomInt(0, currentMap.height * 2);
+    if(!currentMap.isPositionWall(x, y))
+      // Give a 5% chance of producing a "big cheese" worth more points
+      if(randomInt(0, 100) < 5)
+        var cheese = Cheese(x + " " + y + ": " + randomInt(0, 10000), x, y, 5);
+      else
+        var cheese = Cheese(x + " " + y + ": " + randomInt(0, 10000), x, y, 1);
+  }
+}
+
 Cheese.listSize = function() {
     var size = 0;
     for (var i in Cheese.list){
@@ -527,6 +538,10 @@ Cheese.listSize = function() {
     }
     return size;
 };
+
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min+1) + min);
+}
 
 function containsObject(obj, list) {
   for (var i = 0; i < list.length; i++) {
