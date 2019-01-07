@@ -86,6 +86,18 @@
     else
       winner = data.winner;
     endGameInfo.innerHTML = "Game over! " + data.reason + " The winner was " + winner;
+
+    for(var i in Player.list)
+      delete Player.list[i];
+
+    for(var i in Projectile.list)
+      delete Projectile.list[i];
+
+    for(var i in Tap.list)
+      delete Tap.list[i];
+
+    for(var i in Cheese.list)
+      delete Cheese.list[i];
   });
 
   socket.on('timeLeft', function(data) {
@@ -144,6 +156,17 @@
     socket.emit('leaveRoom');
     gameDiv.style.display = "none";
     joinGameDiv.style.display = "inline-block";
+    for(var i in Player.list)
+      delete Player.list[i];
+
+    for(var i in Projectile.list)
+      delete Projectile.list[i];
+
+    for(var i in Tap.list)
+      delete Tap.list[i];
+
+    for(var i in Cheese.list)
+      delete Cheese.list[i];
   }
 
   socket.on('loginResponse', function(data) {
@@ -167,8 +190,13 @@
     if(data.success) {
       joinGameDiv.style.display = "none";
       gameDiv.style.display = "inline-block";
+
       for(var i = 0; i < data.cheese.length; i++)
         new Cheese(data.cheese[i]);
+
+      for(var i = 0; i < data.tap.length; i++)
+        new Tap(data.tap[i]);
+
       announceFeature.innerHTML = "Mice, check out those new cheeses! Cats, you better guard them well, they're worth 5 points each!";
       setTimeout(function() {
         announceFeature.innerHTML = "";
@@ -179,8 +207,7 @@
   });
 
   socket.on('lobbyInfo', function(data) {
-    if(shouldShowLobbyInfo)
-      roomRoom1GameInfo.innerHTML = "Cats: " + data.Room1.cats + ", Mice: " + data.Room1.mice;
+    roomRoom1GameInfo.innerHTML = "Cats: " + data.Room1.cats + ", Mice: " + data.Room1.mice;
   });
 
   var WIDTH = 750;
@@ -310,12 +337,6 @@
     for(var i = 0; i < data.projectile.length; i++)
       new Projectile(data.projectile[i]);
 
-    for(var i = 0; i < data.tap.length; i++)
-      new Tap(data.tap[i]);
-
-    for(var i = 0; i < data.cheese.length; i++)
-      new Cheese(data.cheese[i]);
-
     currentMap = Maps(data.map);
 
   });
@@ -422,7 +443,7 @@
     for(var i in Projectile.list)
       Projectile.list[i].draw();
 
-  }, 100);
+  }, 125);
 
   Maps = function(initPack) {
     var self = {

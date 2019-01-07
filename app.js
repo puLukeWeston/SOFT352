@@ -152,7 +152,7 @@ io.sockets.on('connection', function(socket) {
         else {
           SOCKET_LIST[socket.id].roomname = data.roomname;
           SOCKET_LIST[socket.id].choice = data.choice;
-          socket.emit('joinRoomResponse', {success:true, cheese:Cheese.getAllInitPack()});
+          socket.emit('joinRoomResponse', {success:true, cheese:Cheese.getAllInitPack(), tap:Tap.getAllInitPack()});
           Player.onConnect(socket, SOCKET_LIST[socket.id].username, data.choice);
           informLobby();
         }
@@ -287,18 +287,24 @@ setInterval(function() {
 
   // If any of the games have ended
   for(var g in endedGames) {
+    var removePack = Entity.getRemovePack();
     for(var i in SOCKET_LIST) {
       // Find the clients connected to that game
       if(SOCKET_LIST[i].roomname === endedGames[g].roomname) {
         // Alert them that the game has finished, and who the winner is
-        SOCKET_LIST[i].socket.emit('gameOver', {reason:endedGames[g].reason, winner:endedGames[g].winner})
+        SOCKET_LIST[i].socket.emit('gameOver', {reason:endedGames[g].reason, winner:endedGames[g].winner});
+        // Disconnect the players from the room 
+        for(var p in Player.list) {
+          if(Player.list[p].id === SOCKET_LIST[i].username)
+            Player.onDisconnect(SOCKET_LIST[i].username);
+        }
+
         // Reset the SOCKET_LIST details as they would have returned to the lobby
         SOCKET_LIST[i].roomname = "";
         SOCKET_LIST[i].choice = "";
         // Get a new version of the removePack (as the cheese will now be gone)
-        var packs = Entity.getFrameUpdateData();
         // Send it to those which were in the room that has now ended
-        SOCKET_LIST[i].socket.emit('remove', packs.removePack);
+        SOCKET_LIST[i].socket.emit('remove', removePack);
         informLobby();
       }
     }
@@ -344,4 +350,4 @@ setInterval(function() {
     if(Date.now() - RECENTLY_USED[i].time >= 30000)
       delete RECENTLY_USED[i];
   }
-}, 1000);
+}, 30000);

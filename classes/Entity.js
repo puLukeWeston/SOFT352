@@ -1,7 +1,7 @@
 var maps = require('./Map.js');
 
 var currentMap = Maps("blueprints");
-var initPack = {player:[], projectile:[], tap:[], cheese:[], map:{id:currentMap.id, width:currentMap.width, height:currentMap.height, grid:currentMap.grid}};
+var initPack = {player:[], projectile:[], map:{id:currentMap.id, width:currentMap.width, height:currentMap.height, grid:currentMap.grid}};
 var removePack = {player:[], projectile:[], cheese:[]};
 
 Entity = function() {
@@ -38,13 +38,11 @@ var lastUpdate = {
 Entity.getFrameUpdateData = function() {
 
  Cheese.update();
- 
+
   var pack = {
     initPack:{
       player:initPack.player,
       projectile:initPack.projectile,
-      tap:initPack.tap,
-      cheese:initPack.cheese,
       map:initPack.map
     },
     removePack:{
@@ -87,14 +85,20 @@ Entity.getFrameUpdateData = function() {
 
   initPack.player = [];
   initPack.projectile = [];
-  initPack.tap = [];
-  initPack.cheese = [];
   initPack.map = [];
   removePack.player = [];
   removePack.projectile = [];
   removePack.cheese = [];
 
   return pack;
+}
+
+Entity.getRemovePack = function() {
+  return {
+    player:removePack.player,
+    projectile:removePack.projectile,
+    cheese:removePack.cheese
+  };
 }
 
 // Create a new Player object
@@ -247,6 +251,14 @@ Player.onConnect = function(socket, id, assignment) {
     if(data.inputId === 'space')
       player.pressingSpace = data.state;
   });
+
+  // Send the client an initialisation pack of all of the items needed to draw
+  socket.emit('init', {
+    player:Player.getAllInitPack(),
+    projectile:Projectile.getAllInitPack(),
+    map:{id:currentMap.id, width:currentMap.width, height:currentMap.height, grid:currentMap.grid}
+  });
+
 }
 Player.list = {};
 
@@ -416,7 +428,6 @@ Tap = function(id, owner, xPos, yPos) {
   }
 
   Tap.list[id] = self;
-  initPack.tap.push(self.getInitPack());
   return self;
 }
 Tap.list = {};
@@ -488,7 +499,6 @@ Cheese = function(id, x, y, award) {
   }
 
   Cheese.list[self.id] = self;
-  initPack.cheese.push(self.getInitPack());
   return self;
 }
 Cheese.list = {};
