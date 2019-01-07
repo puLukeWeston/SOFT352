@@ -104,6 +104,7 @@ describe("Server-side App Responses", function() {
       res.Room1.total.should.be.exactly(2).and.be.Number();
       res.Room1.cats.should.be.exactly(1).and.be.Number();
       res.Room1.mice.should.be.exactly(1).and.be.Number();
+      res.Room1.time.should.be.Number();
       player0.disconnect();
       done();
     });
@@ -117,6 +118,7 @@ describe("Server-side App Responses", function() {
         res.Room1.total.should.be.exactly(1).and.be.Number();
         res.Room1.cats.should.be.exactly(1).and.be.Number();
         res.Room1.mice.should.be.exactly(0).and.be.Number();
+        res.Room1.time.should.be.Number();
         done();
       });
 
@@ -141,6 +143,7 @@ describe("Server-side App Responses", function() {
     player1.on('init', function(initPack) {
       for(var i = 0; i < initPack.player.length; i++){
         if(initPack.player[i].assignment === "M"){
+          console.log(initPack.player[i].id)
           initPack.player[i].x.should.equal(1125);
           initPack.player[i].y.should.equal(965);
           initPack.player[i].spd.should.equal(16);
