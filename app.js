@@ -79,7 +79,7 @@ io.sockets.on('connection', function(socket) {
         SOCKET_LIST[socket.id].username = RECENTLY_USED[i].username;
         SOCKET_LIST[socket.id].token = RECENTLY_USED[i].token;
         socket.emit('reconnect', {result:true, id:SOCKET_LIST[socket.id].username});
-        informLobby();
+        informSingleClient(SOCKET_LIST[socket.id].username);
         break;
       }
     }
@@ -208,6 +208,7 @@ io.sockets.on('connection', function(socket) {
 function getRoomInformation(room) {
   var cats = 0;
   var mice = 0;
+  var time = null;
   for(var i in SOCKET_LIST) {
     if(SOCKET_LIST[i].roomname == room) {
       if(SOCKET_LIST[i].choice == "C")
@@ -216,20 +217,41 @@ function getRoomInformation(room) {
         mice++;
     }
   }
+  for(var i in GAMES_STARTED) {
+    if(GAMES_STARTED[i].roomname == room) {
+      time = Math.round((Date.now() - GAMES_STARTED[i].time) / 1000);
+      break;
+    }
+  }
   return {
     total: cats + mice,
     cats: cats,
-    mice: mice
+    mice: mice,
+    time: time
   };
 }
 
+// Emits the lobby information to all clients who aren't in games
 function informLobby() {
   for(var i in SOCKET_LIST) {
-    if(SOCKET_LIST[i].username !== undefined) {
+    if(SOCKET_LIST[i].username !== undefined && (SOCKET_LIST[i].roomname !== undefined && SOCKET_LIST[i].roomname !== "")) {
       var pack = {
         Room1: getRoomInformation("Room1")
       }
       SOCKET_LIST[i].socket.emit('lobbyInfo', pack);
+    }
+  }
+}
+
+// Emits the lobby information to a specific client
+function informSingleClient(id) {
+  for(var i in SOCKET_LIST) {
+    if(SOCKET_LIST[i].username === id) {
+      var pack = {
+        Room1: getRoomInformation("Room1")
+      }
+      SOCKET_LIST[i].socket.emit('lobbyInfo', pack);
+      break;
     }
   }
 }
@@ -314,17 +336,9 @@ setInterval(function() {
   for(var i in SOCKET_LIST) {
     if(SOCKET_LIST[i].roomname === "Room1") {
       // Find out when their game started so the user can be informed of how long is left
-      var started = null;
-      for(var g in GAMES_STARTED) {
-        if(GAMES_STARTED[g].roomname === SOCKET_LIST[i].roomname) {
-          started = GAMES_STARTED[g].time;
-          break;
-        }
-      }
       SOCKET_LIST[i].socket.emit('init', packs.initPack);
       SOCKET_LIST[i].socket.emit('update', packs.updatePack);
       SOCKET_LIST[i].socket.emit('remove', packs.removePack);
-      SOCKET_LIST[i].socket.emit('timeLeft', Math.round((Date.now() - started) / 1000));
     }
   }
 
@@ -343,6 +357,28 @@ setInterval(function() {
   }
 
 },1000/20);
+
+// If the client is in a room, then every second they will receive the remaining duration of the game that they are in
+// If the client is in the lobby, then every second they will receive the lobby information (to update the time remaining for all the games)
+setInterval(function() {
+  for(var i in SOCKET_LIST) {
+    if(SOCKET_LIST[i].username !== undefined) {
+      var started = null;
+      for(var g in GAMES_STARTED) {
+        if(GAMES_STARTED[g].roomname === SOCKET_LIST[i].roomname) {
+          started = GAMES_STARTED[g].time;
+          break;
+        }
+      }
+
+      if(SOCKET_LIST[i].roomname !== undefined && SOCKET_LIST[i].roomname !== "") {
+        SOCKET_LIST[i].socket.emit('timeLeft', Math.round((Date.now() - started) / 1000));
+      } else {
+        informSingleClient(SOCKET_LIST[i].username);
+      }
+    }
+  }
+}, 1000)
 
 // Remove RECENTLY_USED details after 30 seconds
 setInterval(function() {

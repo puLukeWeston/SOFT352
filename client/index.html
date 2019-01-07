@@ -14,26 +14,27 @@
 </div>
 
 <div id="joinGameDiv" style="display:none;">
-  <div id="room1Container">
-    <p align="center" style="font-weight:bold;">Room 1:</p>
+  <div id="room1Container" align="center">
+    <p style="font-weight:bold;">Room 1:</p>
     <button id="joinRoom1AsCat">Join as Cat!</button>
     <button id="joinRoom1AsMouse">Join as Mouse!</button>
-    <p align="center" id=roomRoom1GameInfo></p>
-    <p align="center" id="endGameInfo"></p>
+    <p id="roomRoom1GameInfo"></p>
+    <p id="endGameInfo"></p>
   </div>
 </div>
 
-<div id="gameDiv" style="display:none;">
+<div id="gameDiv" style="display:none; width:100%;" align="center">
   <div>
-    <p id="gameInformation"></p>
-    <canvas id="gameboard" width="750" height="500" style="border:1px solid #000000;"></canvas>
+    <canvas id="gameboard" width="750" height="500" style="position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin:auto;"></canvas>
+    <canvas id="gameboardUI" width="750" height="500" style="position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin:auto;"></canvas>
   </div>
-  <button id="leaveGame">Leave Game</button>
-  <h3 id="announceFeature"></h3>
+  <button id="leaveGame" style="position: absolute; top: 600px;">Leave Game</button>
+  <h3 id="announceFeature" style="height:25px; "></h3>
 </div>
 
 <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
 <script src="https://app.launchdarkly.com/snippet/ldclient.min.js"></script>
+<script src="/client/index.css"></script>
 
 
 <script>
@@ -53,9 +54,11 @@
   var roomRoom1GameInfo = document.getElementById("roomRoom1GameInfo");
   var endGameInfo = document.getElementById("endGameInfo");
 
-  var canvas = document.getElementById("gameboard");
-  var gameboard = canvas.getContext("2d");
-  var gameInformation = document.getElementById("gameInformation");
+  var gameboard = document.getElementById("gameboard").getContext("2d");
+  // Can't be done in one go as I need canvas to monitor clicking
+  var canvas = document.getElementById("gameboardUI");
+  var gameboardUI = canvas.getContext("2d");
+  gameboardUI.font = '30px Arial';
   var announceFeature = document.getElementById("announceFeature");
   var leaveGame = document.getElementById("leaveGame");
 
@@ -87,30 +90,17 @@
       winner = data.winner;
     endGameInfo.innerHTML = "Game over! " + data.reason + " The winner was " + winner;
 
-    for(var i in Player.list)
-      delete Player.list[i];
-
-    for(var i in Projectile.list)
-      delete Projectile.list[i];
-
-    for(var i in Tap.list)
-      delete Tap.list[i];
-
-    for(var i in Cheese.list)
-      delete Cheese.list[i];
+    clearLists();
   });
 
   socket.on('timeLeft', function(data) {
-    console.log(data);
+    passedTime = data;
   })
 
   var ldclient = LDClient.initialize('5c2524ff53f8631ecef47a1b', {firstName:'Luke', lastName:'Weston', key: 'luke@example.com'});
-  var shouldShowLobbyInfo = false;
-  var shouldAllowCatToBoost = false;
 
   function render() {
-    shouldShowLobbyInfo = ldclient.variation('lobby-info', false);
-    shouldAllowCatToBoost = ldclient.variation('cat-space-bar-action', false);
+
   }
 
   ldclient.on('ready', render);
@@ -156,17 +146,8 @@
     socket.emit('leaveRoom');
     gameDiv.style.display = "none";
     joinGameDiv.style.display = "inline-block";
-    for(var i in Player.list)
-      delete Player.list[i];
 
-    for(var i in Projectile.list)
-      delete Projectile.list[i];
-
-    for(var i in Tap.list)
-      delete Tap.list[i];
-
-    for(var i in Cheese.list)
-      delete Cheese.list[i];
+    clearLists();
   }
 
   socket.on('loginResponse', function(data) {
@@ -207,11 +188,15 @@
   });
 
   socket.on('lobbyInfo', function(data) {
-    roomRoom1GameInfo.innerHTML = "Cats: " + data.Room1.cats + ", Mice: " + data.Room1.mice;
+    roomRoom1GameInfo.innerHTML = "Cats: " + data.Room1.cats + ", Mice: " + data.Room1.mice + ". Time Remaining: " + (GAME_LENGTH - data.Room1.time) + " seconds.";
   });
 
   var WIDTH = 750;
   var HEIGHT = 500;
+  var GAME_LENGTH = 60;
+  var lastScore = null;
+  var lastTime = null;
+  var passedTime = null;
 
   var Img = {};
   Img.cat = new Image();
@@ -433,7 +418,7 @@
 
     // Draw the clickable elements in their new positions
     for(var i = 0; i < interactableElements.length; i++)
-      gameboard.fillRect(interactableElements[i].left, interactableElements[i].top, interactableElements[i].width, interactableElements[i].height);
+      gameboardUI.fillRect(interactableElements[i].left, interactableElements[i].top, interactableElements[i].width, interactableElements[i].height);
 
     // Draw the players in their new positions
     for(var i in Player.list)
@@ -470,11 +455,37 @@
   // Draw the assignment & score in the top left of the canvas
   var drawScore = function() {
     if(Player.list[selfId] !== undefined) {
+      // If the score hasn't changed, don't waste cpu usage on drawing text (as it's very heavy)
+      if(lastScore === Player.list[selfId].score && lastTime === passedTime)
+        return;
+      gameboardUI.fillStyle = "white";
+      gameboardUI.clearRect(0, 0, WIDTH, HEIGHT);
+
+      if(passedTime !== null) {
+        gameboardUI.fillText(GAME_LENGTH - passedTime, 700, 30);
+        lastTime = passedTime;
+      }
+
       if(Player.list[selfId].assignment === "C")
-        gameInformation.innerHTML = "You are the cat! Your score is: " + Player.list[selfId].score;
+        gameboardUI.fillText("You've caught " + Player.list[selfId].score + " mice", 0, 30);
       if(Player.list[selfId].assignment === "M")
-        gameInformation.innerHTML = "You are a mouse! Your score is: " + Player.list[selfId].score;
+        gameboardUI.fillText("You've collected " + Player.list[selfId].score + " cheese", 0, 30);
+      lastScore == Player.list[selfId].score;
     }
+  }
+
+  var clearLists = function() {
+    for(var i in Player.list)
+      delete Player.list[i];
+
+    for(var i in Projectile.list)
+      delete Projectile.list[i];
+
+    for(var i in Tap.list)
+      delete Tap.list[i];
+
+    for(var i in Cheese.list)
+      delete Cheese.list[i];
   }
 
   // Listen for the WASD keydown & report changes
@@ -487,17 +498,15 @@
       socket.emit('keyPress',{inputId:'down',state:true});
     if(event.keyCode === 68) //d
       socket.emit('keyPress',{inputId:'right',state:true});
-    if(shouldAllowCatToBoost) {
-      if(event.keyCode === 32) //space
-        if(!spaceCooldown) {
-          spaceCooldown = true;
-          socket.emit('keyPress',{inputId:'space',state:true});
-          setTimeout(function() {
-            spaceCooldown = false;
-          }, 10000);
-        } else
-          console.log("You can't do that again yet")
-    }
+    if(event.keyCode === 32) //space
+      if(!spaceCooldown) {
+        spaceCooldown = true;
+        socket.emit('keyPress',{inputId:'space',state:true});
+        setTimeout(function() {
+          spaceCooldown = false;
+        }, 10000);
+      } else
+        console.log("You can't do that again yet")
   }
 
   // Listen for the WASD keyup & report changes
@@ -510,9 +519,8 @@
       socket.emit('keyPress',{inputId:'down', state:false});
     if(event.keyCode === 68) //d
       socket.emit('keyPress',{inputId:'right', state:false});
-    if(shouldAllowCatToBoost)
-      if(event.keyCode === 32)  //space
-        socket.emit('keyPress',{inputId:'space',state:false});
+    if(event.keyCode === 32)  //space
+      socket.emit('keyPress',{inputId:'space',state:false});
   }
 
   // When the mouse is clicked over the canvas
